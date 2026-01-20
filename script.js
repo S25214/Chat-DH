@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
         bots: [],
         currentBotId: null,
         apiKey: localStorage.getItem('gemini_api_key') || '',
-        modelName: localStorage.getItem('gemini_model_name') || 'gemini-1.5-flash',
+        modelName: localStorage.getItem('gemini_model_name') || 'gemini-2.5-flash-lite',
         dhStreamId: localStorage.getItem('dh_stream_id') || '',
         ttsUrl: localStorage.getItem('tts_url') || '',
         ttsToken: localStorage.getItem('tts_token') || '',
@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Save Settings
     saveSettingsBtn.addEventListener('click', () => {
         const key = document.getElementById('api-key-input').value.trim();
-        const model = document.getElementById('model-name-input').value.trim() || 'gemini-1.5-flash';
+        const model = document.getElementById('model-name-input').value.trim() || 'gemini-2.5-flash-lite';
         const streamId = document.getElementById('dh-stream-id').value.trim();
         const ttsUrl = document.getElementById('tts-url').value.trim();
         const ttsToken = document.getElementById('tts-token').value.trim();
