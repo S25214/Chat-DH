@@ -189,32 +189,48 @@
             moveHandle.innerHTML = '<div style="width:6px; height:6px; background:#fff; position:absolute; top:4px; right:4px; border-radius:50%;"></div>';
             container.appendChild(moveHandle);
 
+            // --- HELPER FOR TOUCH/MOUSE ---
+            function getClientPos(e) {
+                if (e.touches && e.touches.length > 0) {
+                    return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                }
+                return { x: e.clientX, y: e.clientY };
+            }
+
             // --- RESIZING LOGIC ---
             let isResizing = false;
             let startX, startY, startWidth, startHeight;
             let currentResizeShield = null;
 
-            handle.addEventListener('mousedown', function (e) {
-                e.preventDefault();
+            function startResize(e) {
+                if (e.cancelable) e.preventDefault();
                 isResizing = true;
                 currentResizeShield = createDragShield('nwse-resize');
 
-                startX = e.clientX;
-                startY = e.clientY;
+                const pos = getClientPos(e);
+                startX = pos.x;
+                startY = pos.y;
                 startWidth = parseInt(document.defaultView.getComputedStyle(container).width, 10);
                 startHeight = parseInt(document.defaultView.getComputedStyle(container).height, 10);
 
-                document.addEventListener('mousemove', doDrag, true);
+                document.addEventListener('mousemove', doDrag, { capture: true, passive: false });
                 document.addEventListener('mouseup', stopDrag, true);
-            });
+                document.addEventListener('touchmove', doDrag, { capture: true, passive: false });
+                document.addEventListener('touchend', stopDrag, true);
+                document.addEventListener('touchcancel', stopDrag, true);
+            }
+
+            handle.addEventListener('mousedown', startResize);
+            handle.addEventListener('touchstart', startResize, { passive: false });
 
             function doDrag(e) {
                 if (!isResizing) return;
-                e.preventDefault();
+                if (e.cancelable) e.preventDefault();
                 e.stopPropagation();
 
-                const deltaX = startX - e.clientX;
-                const deltaY = startY - e.clientY;
+                const pos = getClientPos(e);
+                const deltaX = startX - pos.x;
+                const deltaY = startY - pos.y;
 
                 container.style.width = (startWidth + deltaX) + 'px';
                 container.style.height = (startHeight + deltaY) + 'px';
@@ -226,8 +242,11 @@
                 removeDragShield(currentResizeShield);
                 currentResizeShield = null;
 
-                document.removeEventListener('mousemove', doDrag, true);
+                document.removeEventListener('mousemove', doDrag, { capture: true });
                 document.removeEventListener('mouseup', stopDrag, true);
+                document.removeEventListener('touchmove', doDrag, { capture: true });
+                document.removeEventListener('touchend', stopDrag, true);
+                document.removeEventListener('touchcancel', stopDrag, true);
             }
 
             // --- MOVING LOGIC ---
@@ -235,29 +254,37 @@
             let startMoveX, startMoveY, startRight, startBottom;
             let currentMoveShield = null;
 
-            moveHandle.addEventListener('mousedown', function (e) {
-                e.preventDefault();
+            function startMove(e) {
+                if (e.cancelable) e.preventDefault();
                 isMoving = true;
                 currentMoveShield = createDragShield('move');
 
-                startMoveX = e.clientX;
-                startMoveY = e.clientY;
+                const pos = getClientPos(e);
+                startMoveX = pos.x;
+                startMoveY = pos.y;
 
                 const computedStyle = document.defaultView.getComputedStyle(container);
                 startRight = parseInt(computedStyle.right, 10);
                 startBottom = parseInt(computedStyle.bottom, 10);
 
-                document.addEventListener('mousemove', doMove, true);
+                document.addEventListener('mousemove', doMove, { capture: true, passive: false });
                 document.addEventListener('mouseup', stopMove, true);
-            });
+                document.addEventListener('touchmove', doMove, { capture: true, passive: false });
+                document.addEventListener('touchend', stopMove, true);
+                document.addEventListener('touchcancel', stopMove, true);
+            }
+
+            moveHandle.addEventListener('mousedown', startMove);
+            moveHandle.addEventListener('touchstart', startMove, { passive: false });
 
             function doMove(e) {
                 if (!isMoving) return;
-                e.preventDefault();
+                if (e.cancelable) e.preventDefault();
                 e.stopPropagation();
 
-                const deltaX = e.clientX - startMoveX;
-                const deltaY = e.clientY - startMoveY;
+                const pos = getClientPos(e);
+                const deltaX = pos.x - startMoveX;
+                const deltaY = pos.y - startMoveY;
 
                 let newRight = startRight - deltaX;
                 let newBottom = startBottom - deltaY;
@@ -273,16 +300,12 @@
                 if (newRight < 0) newRight = 0;
 
                 // 2. Left Boundary check (Left edge shouldn't go < 0)
-                // Left position = viewportWidth - (newRight + width)
-                // We want: viewportWidth - (newRight + width) >= 0 => newRight + width <= viewportWidth => newRight <= viewportWidth - width
                 if (newRight > viewportWidth - width) newRight = viewportWidth - width;
 
                 // 3. Bottom Boundary check (Bottom edge shouldn't go < 0)
                 if (newBottom < 0) newBottom = 0;
 
                 // 4. Top Boundary check (Top edge shouldn't go < 0)
-                // Top position = viewportHeight - (newBottom + height)
-                // We want: viewportHeight - (newBottom + height) >= 0 => newBottom + height <= viewportHeight => newBottom <= viewportHeight - height
                 if (newBottom > viewportHeight - height) newBottom = viewportHeight - height;
 
                 container.style.right = newRight + 'px';
@@ -295,8 +318,11 @@
                 removeDragShield(currentMoveShield);
                 currentMoveShield = null;
 
-                document.removeEventListener('mousemove', doMove, true);
+                document.removeEventListener('mousemove', doMove, { capture: true });
                 document.removeEventListener('mouseup', stopMove, true);
+                document.removeEventListener('touchmove', doMove, { capture: true });
+                document.removeEventListener('touchend', stopMove, true);
+                document.removeEventListener('touchcancel', stopMove, true);
             }
         }
 
