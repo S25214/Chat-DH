@@ -145,8 +145,10 @@
                 right: 20px; 
                 width: ${INIT_WIDTH}; 
                 height: ${INIT_HEIGHT}; 
-                min-width: ${MIN_WIDTH}; 
-                min-height: ${MIN_HEIGHT};
+                min-width: min(${MIN_WIDTH}, 100vw); 
+                min-height: min(${MIN_HEIGHT}, 100vh);
+                max-width: 100vw;
+                max-height: 100vh;
                 background: #000; 
                 box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
                 z-index: 99999;
@@ -257,8 +259,34 @@
                 const deltaX = e.clientX - startMoveX;
                 const deltaY = e.clientY - startMoveY;
 
-                container.style.right = (startRight - deltaX) + 'px';
-                container.style.bottom = (startBottom - deltaY) + 'px';
+                let newRight = startRight - deltaX;
+                let newBottom = startBottom - deltaY;
+
+                // --- BOUNDARY CHECKS (Strictly inside viewport) ---
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+                const rect = container.getBoundingClientRect();
+                const width = rect.width;
+                const height = rect.height;
+
+                // 1. Right Boundary check (Right edge shouldn't go < 0)
+                if (newRight < 0) newRight = 0;
+
+                // 2. Left Boundary check (Left edge shouldn't go < 0)
+                // Left position = viewportWidth - (newRight + width)
+                // We want: viewportWidth - (newRight + width) >= 0 => newRight + width <= viewportWidth => newRight <= viewportWidth - width
+                if (newRight > viewportWidth - width) newRight = viewportWidth - width;
+
+                // 3. Bottom Boundary check (Bottom edge shouldn't go < 0)
+                if (newBottom < 0) newBottom = 0;
+
+                // 4. Top Boundary check (Top edge shouldn't go < 0)
+                // Top position = viewportHeight - (newBottom + height)
+                // We want: viewportHeight - (newBottom + height) >= 0 => newBottom + height <= viewportHeight => newBottom <= viewportHeight - height
+                if (newBottom > viewportHeight - height) newBottom = viewportHeight - height;
+
+                container.style.right = newRight + 'px';
+                container.style.bottom = newBottom + 'px';
             }
 
             function stopMove(e) {
@@ -299,6 +327,65 @@
 
         // Store disconnection logic type
         container._isCustomContainer = isCustomContainer;
+
+        // --- WINDOW RESIZE HANDLER ---
+        // Ensure widget stays in bounds when window is resized
+        window.removeEventListener('resize', handleWindowResize); // Remove old if any (logic safety)
+        window.addEventListener('resize', handleWindowResize);
+    }
+
+
+    function handleWindowResize() {
+        if (!container || !document.body.contains(container) || container._isCustomContainer) return;
+
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const rect = container.getBoundingClientRect();
+
+        // Get current "right" and "bottom" computed values
+        // Note: We use computed style because style.right might be empty if set via stylesheet initially (though we set it inline in init)
+        const computedStyle = window.getComputedStyle(container);
+        let currentRight = parseFloat(computedStyle.right);
+        let currentBottom = parseFloat(computedStyle.bottom);
+
+        // Sanity: if NaNs (e.g. positioned by left/top primarily), we need to calculate
+        if (isNaN(currentRight)) currentRight = viewportWidth - (rect.left + rect.width);
+        if (isNaN(currentBottom)) currentBottom = viewportHeight - (rect.top + rect.height);
+
+        let newRight = currentRight;
+        let newBottom = currentBottom;
+        let needsUpdate = false;
+
+        // Clamp Right (Prevent going off right edge)
+        if (newRight < 0) {
+            newRight = 0;
+            needsUpdate = true;
+        }
+
+        // Clamp Left (Prevent going off left edge)
+        // newRight max = viewportWidth - width
+        if (newRight > viewportWidth - rect.width) {
+            newRight = viewportWidth - rect.width;
+            needsUpdate = true;
+        }
+
+        // Clamp Bottom (Prevent going off bottom edge)
+        if (newBottom < 0) {
+            newBottom = 0;
+            needsUpdate = true;
+        }
+
+        // Clamp Top (Prevent going off top edge)
+        // newBottom max = viewportHeight - height
+        if (newBottom > viewportHeight - rect.height) {
+            newBottom = viewportHeight - rect.height;
+            needsUpdate = true;
+        }
+
+        if (needsUpdate) {
+            container.style.right = newRight + 'px';
+            container.style.bottom = newBottom + 'px';
+        }
     }
 
 
@@ -323,6 +410,7 @@
         }
 
         window.removeEventListener('message', handleIframeMessage);
+        window.removeEventListener('resize', handleWindowResize);
 
         // Clear Queue Interval
         if (queueInterval) {
