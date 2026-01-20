@@ -138,16 +138,10 @@
             }
         } else {
             // 1. Create Main Container (Fixed Bottom-Right)
-            // 1. Create Main Container (Fixed via TOP instead of Bottom to prevent keyboard push-up)
-            const vpHeight = window.innerHeight;
-            const initH = parseInt(INIT_HEIGHT);
-            const initTop = vpHeight - initH - 20; // 20px margin from bottom initially
-
             container = document.createElement('div');
             container.style.cssText = `
                 position: fixed; 
-                top: ${initTop}px;
-                bottom: auto;
+                bottom: 20px; 
                 right: 20px; 
                 width: ${INIT_WIDTH}; 
                 height: ${INIT_HEIGHT}; 
@@ -257,7 +251,7 @@
 
             // --- MOVING LOGIC ---
             let isMoving = false;
-            let startMoveX, startMoveY, startRight, startTop;
+            let startMoveX, startMoveY, startRight, startBottom;
             let currentMoveShield = null;
 
             function startMove(e) {
@@ -271,7 +265,7 @@
 
                 const computedStyle = document.defaultView.getComputedStyle(container);
                 startRight = parseInt(computedStyle.right, 10);
-                startTop = parseInt(computedStyle.top, 10);
+                startBottom = parseInt(computedStyle.bottom, 10);
 
                 document.addEventListener('mousemove', doMove, { capture: true, passive: false });
                 document.addEventListener('mouseup', stopMove, true);
@@ -293,13 +287,7 @@
                 const deltaY = pos.y - startMoveY;
 
                 let newRight = startRight - deltaX;
-                // For Top: moving DOWN (positive deltaY) increases Top.
-                // deltaY = current - start.
-                // If I move mouse down, y increases. deltaY > 0. Top should increase.
-                // Wait, logic check: 
-                // X: Right. Move mouse RIGHT (x increases). deltaX > 0. NewRight = StartRight - deltaX. Correct (Right gets smaller).
-                // Y: Top. Move mouse DOWN (y increases). deltaY > 0. NewTop = StartTop + deltaY.
-                let newTop = startTop + deltaY;
+                let newBottom = startBottom - deltaY;
 
                 // --- BOUNDARY CHECKS (Strictly inside viewport) ---
                 const viewportWidth = window.innerWidth;
@@ -314,15 +302,14 @@
                 // 2. Left Boundary check (Left edge shouldn't go < 0)
                 if (newRight > viewportWidth - width) newRight = viewportWidth - width;
 
-                // 3. Top Boundary check (Top edge shouldn't go < 0)
-                if (newTop < 0) newTop = 0;
+                // 3. Bottom Boundary check (Bottom edge shouldn't go < 0)
+                if (newBottom < 0) newBottom = 0;
 
-                // 4. Bottom Boundary check (Bottom edge shouldn't go < 0)
-                if (newTop > viewportHeight - height) newTop = viewportHeight - height;
+                // 4. Top Boundary check (Top edge shouldn't go < 0)
+                if (newBottom > viewportHeight - height) newBottom = viewportHeight - height;
 
                 container.style.right = newRight + 'px';
-                container.style.top = newTop + 'px';
-                container.style.bottom = 'auto'; // ensure bottom doesn't interfere
+                container.style.bottom = newBottom + 'px';
             }
 
             function stopMove(e) {
@@ -382,17 +369,18 @@
         const viewportHeight = window.innerHeight;
         const rect = container.getBoundingClientRect();
 
-        // Get current "right" and "top" computed values
+        // Get current "right" and "bottom" computed values
+        // Note: We use computed style because style.right might be empty if set via stylesheet initially (though we set it inline in init)
         const computedStyle = window.getComputedStyle(container);
         let currentRight = parseFloat(computedStyle.right);
-        let currentTop = parseFloat(computedStyle.top);
+        let currentBottom = parseFloat(computedStyle.bottom);
 
-        // Sanity check
+        // Sanity: if NaNs (e.g. positioned by left/top primarily), we need to calculate
         if (isNaN(currentRight)) currentRight = viewportWidth - (rect.left + rect.width);
-        if (isNaN(currentTop)) currentTop = rect.top;
+        if (isNaN(currentBottom)) currentBottom = viewportHeight - (rect.top + rect.height);
 
         let newRight = currentRight;
-        let newTop = currentTop;
+        let newBottom = currentBottom;
         let needsUpdate = false;
 
         // Clamp Right (Prevent going off right edge)
@@ -402,36 +390,28 @@
         }
 
         // Clamp Left (Prevent going off left edge)
+        // newRight max = viewportWidth - width
         if (newRight > viewportWidth - rect.width) {
             newRight = viewportWidth - rect.width;
             needsUpdate = true;
         }
 
-        // Clamp Top (Prevent going off top edge)
-        if (newTop < 0) {
-            newTop = 0;
+        // Clamp Bottom (Prevent going off bottom edge)
+        if (newBottom < 0) {
+            newBottom = 0;
             needsUpdate = true;
         }
 
-        // Clamp Bottom (Prevent going off bottom edge)
-        // CRITICAL FOR MOBILE: If keyboard is open (input focused), DISABLE this check.
-        // We want the widget to stay hidden behind keyboard (bottom clipped) rather than being pushed up.
-
-        const activeElement = document.activeElement;
-        const isInputFocused = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA');
-
-        if (!isInputFocused) {
-            // Only enforce bottom boundary if NOT typing
-            if (newTop > viewportHeight - rect.height) {
-                newTop = viewportHeight - rect.height;
-                needsUpdate = true;
-            }
+        // Clamp Top (Prevent going off top edge)
+        // newBottom max = viewportHeight - height
+        if (newBottom > viewportHeight - rect.height) {
+            newBottom = viewportHeight - rect.height;
+            needsUpdate = true;
         }
 
         if (needsUpdate) {
             container.style.right = newRight + 'px';
-            container.style.top = newTop + 'px';
-            container.style.bottom = 'auto';
+            container.style.bottom = newBottom + 'px';
         }
     }
 
