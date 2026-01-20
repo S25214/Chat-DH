@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DigitalHuman Custom Container</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #303030;
+            font-family: sans-serif;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #controls {
+            margin: 20px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        /* Custom Container Styles */
+        #my-custom-container {
+            width: 800px;
+            height: 450px;
+            border: 2px solid #00aaff;
+            background: #111;
+            margin-top: 20px;
+            /* DigitalHuman should make this relative if it isn't */
+        }
+    </style>
+</head>
+
+<body>
+    <h1>DigitalHuman Custom Container</h1>
+
+    <div id="controls">
+        <label>Stream URL:</label>
+        <input type="text" id="streamUrlInput" placeholder="https://share.streampixel.io/..."
+            value="https://share.streampixel.io/YOUR_STREAM_ID" style="padding: 5px; width: 300px;">
+        <br><br>
+        <button id="connectBtn" onclick="initCustom()" style="padding: 8px 16px; cursor: pointer;">Init in Custom
+            Container</button>
+        <button id="disconnectBtn" onclick="disconnectDigitalHuman()"
+            style="padding: 8px 16px; cursor: pointer; display: none;">Disconnect</button>
+    </div>
+
+    <!-- The Custom Container -->
+    <div id="my-custom-container">
+        <div style="padding: 20px; color: #666; text-align: center;">
+            Placeholder Content (Should be covered/removed by DigitalHuman)
+        </div>
+    </div>
+
+    <script src="digitalhuman-widget.js"></script>
+
+    <script>
+        function initCustom() {
+            const url = document.getElementById('streamUrlInput').value;
+            const container = document.getElementById('my-custom-container');
+
+            if (url) {
+                // Pass the custom container element as the second argument
+                window.DigitalHuman.init(url, {container: container, autoUnmute: true, showUI: false});
+
+                document.getElementById('connectBtn').style.display = 'none';
+                document.getElementById('disconnectBtn').style.display = 'inline-block';
+            } else {
+                alert('Please enter a Stream URL');
+            }
+        }
+
+        function disconnectDigitalHuman() {
+            if (window.DigitalHuman && window.DigitalHuman.disconnect) {
+                window.DigitalHuman.disconnect();
+                document.getElementById('connectBtn').style.display = 'inline-block';
+                document.getElementById('disconnectBtn').style.display = 'none';
+            }
+        }
+    </script>
+</body>
+
+</html>

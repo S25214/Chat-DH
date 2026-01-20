@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="DigitalHuman/digitalhuman-widget.js"></script>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>AI Bots</h2>
+                <button id="settings-btn" class="icon-btn" title="Settings"><i class="fa-solid fa-gear"></i></button>
+            </div>
+            <div class="bot-list" id="bot-list">
+                <!-- Bot items will be injected here -->
+            </div>
+            <button id="create-bot-btn" class="primary-btn full-width"><i class="fa-solid fa-plus"></i> Create New
+                Bot</button>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="chat-area" id="chat-area">
+            <div class="empty-state" id="empty-state">
+                <i class="fa-solid fa-robot"></i>
+                <h1>Select a Bot to Chat</h1>
+                <p>Choose existing bot from the sidebar or create a new one.</p>
+            </div>
+
+            <div class="chat-interface hidden" id="chat-interface">
+                <header class="chat-header">
+                    <div class="chat-bot-info">
+                        <div class="bot-avatar large" id="current-bot-avatar">🤖</div>
+                        <div>
+                            <h3 id="current-bot-name">Bot Name</h3>
+                            <span class="status">Online</span>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <button id="dh-connect-btn" class="secondary-btn" title="Connect Digital Human"><i
+                                class="fa-solid fa-headset"></i> Connect DH</button>
+                        <button id="edit-bot-btn" class="icon-btn" title="Edit Bot"><i
+                                class="fa-solid fa-pen"></i></button>
+                        <button id="delete-bot-btn" class="icon-btn danger" title="Delete Bot"><i
+                                class="fa-solid fa-trash"></i></button>
+                        <button id="clear-chat-btn" class="icon-btn" title="Clear Chat"><i
+                                class="fa-solid fa-eraser"></i></button>
+                    </div>
+                </header>
+
+                <div class="messages-container" id="messages-container">
+                    <!-- Messages will be injected here -->
+                </div>
+
+                <div class="input-area">
+                    <textarea id="message-input" placeholder="Type your message..." rows="1"></textarea>
+                    <button id="send-btn" class="send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+
+    <!-- Bot Modal (Create/Edit) -->
+    <div class="modal-overlay hidden" id="bot-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modal-title">Create New Bot</h2>
+                <button class="close-modal-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="bot-id">
+                <div class="form-group">
+                    <label>Bot Name</label>
+                    <input type="text" id="bot-name" placeholder="e.g. Coding Assistant">
+                </div>
+                <div class="form-group">
+                    <label>System Instruction</label>
+                    <textarea id="bot-instruction" rows="5"
+                        placeholder="Define how the bot should behave..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Avatar Emoji</label>
+                    <input type="text" id="bot-avatar" placeholder="e.g. 🤖" maxlength="2">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="secondary-btn close-modal-btn">Cancel</button>
+                <button id="save-bot-btn" class="primary-btn">Save Bot</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay hidden" id="settings-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="close-modal-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Gemini API Key</label>
+                    <input type="password" id="api-key-input" placeholder="Paste your API Key here">
+                </div>
+                <div class="form-group">
+                    <label>Gemini Model Name</label>
+                    <input type="text" id="model-name-input" placeholder="e.g. gemini-1.5-flash">
+                </div>
+                <div class="form-group">
+                    <label>Digital Human Stream ID</label>
+                    <input type="text" id="dh-stream-id" placeholder="e.g. https://share.streampixel.io/...">
+                </div>
+                <div class="form-group">
+                    <label>TTS Endpoint URL</label>
+                    <input type="text" id="tts-url" placeholder="https://your-api.com/tts">
+                </div>
+                <div class="form-group">
+                    <label>TTS Auth Token (Optional)</label>
+                    <input type="password" id="tts-token" placeholder="Bearer ...">
+                </div>
+                <div class="form-group">
+                    <label>TTS Custom Params (JSON)</label>
+                    <textarea id="tts-params" rows="4" placeholder='{ "voice_id": "..." }'></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="secondary-btn close-modal-btn">Close</button>
+                <button id="save-settings-btn" class="primary-btn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="storage.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>

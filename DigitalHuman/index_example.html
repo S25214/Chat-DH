@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DigitalHuman Player</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #303030;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Background Website Iframe -->
+    <iframe id="bg-frame"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; border: none; z-index: 0; pointer-events: auto;"></iframe>
+
+    <!-- Test UI for DigitalHuman Functions -->
+    <div id="testUiContainer"
+        style="position: fixed; top: 20px; left: 20px; background: rgba(0, 0, 0, 0.8); border-radius: 8px; color: white; z-index: 100002; font-family: sans-serif; width: fit-content; min-width: 20px; padding-left: 10px; padding-right: 10px; padding-top: 10px;">
+        <div id="uiHandle"
+            style="cursor: move; width: 24px; height: 18px; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 10px;">
+            <div style="height: 3px; background-color: white; border-radius: 2px;"></div>
+            <div style="height: 3px; background-color: white; border-radius: 2px;"></div>
+            <div style="height: 3px; background-color: white; border-radius: 2px;"></div>
+        </div>
+        <div id="uiContent" style="display: none;">
+
+            <!-- Stream URL Control -->
+            <div style="margin-bottom: 15px;">
+                <label>Stream URL:</label><br>
+                <input type="text" id="streamUrlInput" placeholder="https://share.streampixel.io/..."
+                    value="https://share.streampixel.io/YOUR_STREAM_ID" style="padding: 5px; width: 200px;">
+                <button id="connectBtn" onclick="initDigitalHuman()"
+                    style="padding: 5px 10px; cursor: pointer;">Connect</button>
+                <button id="disconnectBtn" onclick="disconnectDigitalHuman()"
+                    style="padding: 5px 10px; cursor: pointer; display: none;">Disconnect</button>
+                <br>
+                <label style="font-size: 12px; display: inline-flex; align-items: center; margin-top: 5px;">
+                    <input type="checkbox" id="autoUnmuteCheckbox" checked style="margin-right: 5px;"> Auto Unmute
+                </label>
+                <label
+                    style="font-size: 12px; display: inline-flex; align-items: center; margin-top: 5px; margin-left: 10px;">
+                    <input type="checkbox" id="showUICheckbox" checked style="margin-right: 5px;"> Show UI
+                </label>
+            </div>
+
+            <!-- Background URL Control -->
+            <div style="margin-bottom: 15px;">
+                <label>Background URL:</label><br>
+                <input type="text" id="bgUrlInput" placeholder="https://example.com"
+                    style="padding: 5px; width: 200px;">
+                <button onclick="loadBgUrl()" style="padding: 5px 10px; cursor: pointer;">Load</button>
+            </div>
+
+            <!-- UI Control Buttons -->
+            <div style="margin-bottom: 15px;">
+                <label>UI Control:</label><br>
+                <button onclick="window.DigitalHuman.sendMessage('uiOn')"
+                    style="padding: 5px 10px; cursor: pointer; margin-right: 5px;">UI On</button>
+                <button onclick="window.DigitalHuman.sendMessage('uiOff')" style="padding: 5px 10px; cursor: pointer;">UI
+                    Off</button>
+            </div>
+
+            <!-- sendMessage -->
+            <div style="margin-bottom: 15px;">
+                <label>Send Message:</label><br>
+                <input type="text" id="msgInput" placeholder="Enter message" style="padding: 5px; width: 200px;">
+                <button onclick="testSendMessage()" style="padding: 5px 10px; cursor: pointer;">Send</button>
+            </div>
+
+            <!-- setConfigID -->
+            <div style="margin-bottom: 15px;">
+                <label>Set Config ID:</label><br>
+                <input type="text" id="configInput" placeholder="Enter config ID" style="padding: 5px; width: 200px;">
+                <button onclick="testSetConfigID()" style="padding: 5px 10px; cursor: pointer;">Set</button>
+            </div>
+
+            <!-- sendJob -->
+            <div style="margin-bottom: 15px;">
+                <label>Send Job:</label><br>
+                <input type="text" id="jobTextInput" placeholder="Text"
+                    style="padding: 5px; width: 200px; margin-bottom: 5px;"><br>
+                <input type="text" id="jobCallbackInput" placeholder="Callback URL"
+                    style="padding: 5px; width: 200px; margin-bottom: 5px;"><br>
+                <input type="text" id="jobTokenInput" placeholder="Auth Token"
+                    style="padding: 5px; width: 200px; margin-bottom: 5px;"><br>
+                <textarea id="jobCustomParamsInput" placeholder='Custom Params JSON (e.g. {"key": "value"})'
+                    style="padding: 5px; width: 200px; margin-bottom: 5px; height: 60px; font-family: monospace;"></textarea><br>
+                <button onclick="testSendJob()" style="padding: 5px 10px; cursor: pointer;">Send Job</button>
+            </div>
+        </div>
+
+        <script src="digitalhuman-widget.js"></script>
+
+        <script>
+            // Test Functions accessible from the UI
+            // UI Logic: Toggle & Drag
+            (function () {
+                const uiContainer = document.getElementById('testUiContainer');
+                const uiHandle = document.getElementById('uiHandle');
+                const uiContent = document.getElementById('uiContent');
+
+                // --- DRAG SHIELD LOGIC ---
+                let dragShield = null;
+                function createDragShield(cursorType) {
+                    if (dragShield) return;
+                    dragShield = document.createElement('div');
+                    dragShield.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100vw;
+                        height: 100vh;
+                        z-index: 2147483647; /* Max Z-Index */
+                        cursor: ${cursorType};
+                        background: transparent;
+                    `;
+                    document.body.appendChild(dragShield);
+                }
+
+                function removeDragShield() {
+                    if (dragShield && dragShield.parentNode) {
+                        dragShield.parentNode.removeChild(dragShield);
+                    }
+                    dragShield = null;
+                }
+
+                function toggleUI() {
+                    if (uiContent.style.display === 'none') {
+                        uiContent.style.display = 'block';
+                    } else {
+                        uiContent.style.display = 'none';
+                    }
+                }
+
+                let isDragging = false;
+                let hasMoved = false;
+                let startX, startY, initialLeft, initialTop;
+
+                if (uiHandle) {
+                    uiHandle.addEventListener('mousedown', function (e) {
+                        e.preventDefault();
+                        isDragging = false;
+                        hasMoved = false;
+                        startX = e.clientX;
+                        startY = e.clientY;
+
+                        // Create shield
+                        createDragShield('move');
+
+                        const rect = uiContainer.getBoundingClientRect();
+                        initialLeft = rect.left;
+                        initialTop = rect.top;
+
+                        document.addEventListener('mousemove', onMouseMove);
+                        document.addEventListener('mouseup', onMouseUp);
+                    });
+                }
+
+                function onMouseMove(e) {
+                    const dx = e.clientX - startX;
+                    const dy = e.clientY - startY;
+
+                    // Threshold to consider it a drag
+                    if (!isDragging && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+                        isDragging = true;
+                        hasMoved = true;
+                    }
+
+                    if (isDragging) {
+                        uiContainer.style.left = (initialLeft + dx) + 'px';
+                        uiContainer.style.top = (initialTop + dy) + 'px';
+                    }
+                }
+
+                function onMouseUp(e) {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+
+                    removeDragShield(); // Remove shield
+
+                    if (!hasMoved) {
+                        toggleUI();
+                    }
+
+                    isDragging = false;
+                }
+            })();
+
+            function initDigitalHuman() {
+                const url = document.getElementById('streamUrlInput').value;
+                if (url) {
+                    const autoUnmute = document.getElementById('autoUnmuteCheckbox').checked;
+                    const showUI = document.getElementById('showUICheckbox').checked;
+                    window.DigitalHuman.init(url, { autoUnmute: autoUnmute, showUI: showUI });
+                    document.getElementById('connectBtn').style.display = 'none';
+                    document.getElementById('disconnectBtn').style.display = 'inline-block';
+                } else {
+                    alert('Please enter a Stream URL');
+                }
+            }
+
+            function disconnectDigitalHuman() {
+                if (window.DigitalHuman && window.DigitalHuman.disconnect) {
+                    window.DigitalHuman.disconnect();
+                    document.getElementById('connectBtn').style.display = 'inline-block';
+                    document.getElementById('disconnectBtn').style.display = 'none';
+                }
+            }
+
+            function loadBgUrl() {
+                const url = document.getElementById('bgUrlInput').value;
+                if (url) {
+                    // Ensure URL has protocol
+                    let finalUrl = url;
+                    if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+                        finalUrl = 'https://' + finalUrl;
+                    }
+                    document.getElementById('bg-frame').src = finalUrl;
+                } else {
+                    alert('Please enter a URL');
+                }
+            }
+
+            function testSendMessage() {
+                const msg = document.getElementById('msgInput').value;
+                if (msg) {
+                    window.DigitalHuman.sendMessage(msg);
+                } else {
+                    alert('Please enter a message');
+                }
+            }
+
+            function testSetConfigID() {
+                const configId = document.getElementById('configInput').value;
+                if (configId) {
+                    window.DigitalHuman.setConfigID(configId);
+                } else {
+                    alert('Please enter a config ID');
+                }
+            }
+
+            function testSendJob() {
+                const text = document.getElementById('jobTextInput').value;
+                const callbackUrl = document.getElementById('jobCallbackInput').value;
+                const authToken = document.getElementById('jobTokenInput').value;
+                const customParamsStr = document.getElementById('jobCustomParamsInput').value;
+                let customParams = {};
+
+                try {
+                    if (customParamsStr) {
+                        customParams = JSON.parse(customParamsStr);
+                    }
+                } catch (e) {
+                    alert('Invalid JSON in Custom Params');
+                    return;
+                }
+
+                if (text) {
+                    window.DigitalHuman.sendJob(text, callbackUrl, authToken, customParams);
+                } else {
+                    alert('Please enter text for the job');
+                }
+            }
+        </script>
+</body>
+
+</html>
