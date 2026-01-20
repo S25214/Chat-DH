@@ -1,0 +1,57 @@
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .app-container {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .sidebar {
+        width: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        z-index: 10;
+        transition: transform 0.3s ease-in-out;
+    }
+
+    .chat-area {
+        width: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        z-index: 20;
+        transform: translateX(100%);
+        transition: transform 0.3s ease-in-out;
+    }
+
+    /* State: Mobile Chat Active (Bot Selected) */
+    body.mobile-chat-active .sidebar {
+        transform: translateX(-20%);
+        /* Parallax-like effect or just hide it */
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    body.mobile-chat-active .chat-area {
+        transform: translateX(0);
+    }
+
+    /* Back Button */
+    .mobile-back-btn.hidden {
+        display: none;
+    }
+
+    .mobile-back-btn {
+        display: block !important;
+        margin-right: 0.5rem;
+    }
+}
+
+/* Ensure back button is hidden on desktop */
+@media (min-width: 769px) {
+    .mobile-back-btn {
+        display: none !important;
+    }
+}

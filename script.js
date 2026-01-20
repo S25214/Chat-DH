@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendBtnEl = document.getElementById('send-btn');
     const currentBotAvatarEl = document.getElementById('current-bot-avatar');
     const currentBotNameEl = document.getElementById('current-bot-name');
+    const mobileBackBtn = document.getElementById('mobile-back-btn');
 
     // Buttons
     const createBotBtn = document.getElementById('create-bot-btn');
@@ -51,7 +52,21 @@ document.addEventListener('DOMContentLoaded', () => {
         openModal(settingsModal);
     }
 
+    if (!state.apiKey) {
+        openModal(settingsModal);
+    }
+
     // -- Event Listeners --
+
+    // Mobile Back Button
+    if (mobileBackBtn) {
+        mobileBackBtn.addEventListener('click', () => {
+            toggleMobileChat(false);
+            // Optional: clear selection if you want them to re-select
+            // state.currentBotId = null; 
+            // renderBotList();
+        });
+    }
 
     // Modal controls
     createBotBtn.addEventListener('click', () => {
@@ -251,6 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateChatHeader(bot);
 
         loadHistory(bot.id);
+        toggleMobileChat(true);
     }
 
     function updateChatHeader(bot) {
@@ -396,11 +412,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateDhButtonState() {
         if (state.isDhConnected) {
-            dhConnectBtn.innerHTML = '<i class="fa-solid fa-power-off"></i> Disconnect DH';
+            dhConnectBtn.innerHTML = '<i class="fa-solid fa-power-off"></i> DH';
             dhConnectBtn.className = 'danger-btn';
         } else {
-            dhConnectBtn.innerHTML = '<i class="fa-solid fa-headset"></i> Connect DH';
+            dhConnectBtn.innerHTML = '<i class="fa-solid fa-headset"></i> DH';
             dhConnectBtn.className = 'secondary-btn';
+        }
+    }
+    function toggleMobileChat(showChat) {
+        if (showChat) {
+            document.body.classList.add('mobile-chat-active');
+            if (mobileBackBtn) mobileBackBtn.classList.remove('hidden');
+        } else {
+            document.body.classList.remove('mobile-chat-active');
+            if (mobileBackBtn) mobileBackBtn.classList.add('hidden');
         }
     }
 });
