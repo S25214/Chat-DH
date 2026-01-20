@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.dhStreamId) document.getElementById('dh-stream-id').value = state.dhStreamId;
     if (state.ttsUrl) document.getElementById('tts-url').value = state.ttsUrl;
     if (state.ttsToken) document.getElementById('tts-token').value = state.ttsToken;
+    if (state.ttsParams) document.getElementById('tts-params').value = state.ttsParams;
 
     if (!state.apiKey) {
         openModal(settingsModal);
