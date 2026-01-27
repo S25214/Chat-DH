@@ -3,6 +3,9 @@
     const INIT_HEIGHT = "360px";
     const MIN_WIDTH = "360px";
     const MIN_HEIGHT = "360px";
+    const MESSAGE_DELAY = 2000;
+    const LOOK_AT_DELAY = 2000;
+    const LOOK_AT_INTERVAL = 1000;
 
     // State variables
     let container = null;
@@ -14,7 +17,8 @@
     let config = {
         autoUnmute: true,
         showUI: true,
-        lookAt: false
+        lookAt: false,
+        camera: null
     };
 
     // Face Detection State
@@ -29,6 +33,8 @@
         lastDetection: 0,
         count: 0
     };
+    let enableLookAt = false;
+    let enableLookAtTimeout = null;
 
     // --- HELPER FUNCTIONS ---
 
@@ -110,6 +116,29 @@
                 console.log("Queueing UI Off");
                 messageQueue.push({ command: "generic_message", message: "uiOff" });
             }
+
+            // Queue Camera Config if present
+            if (config.camera) {
+                console.log("Queueing Camera Config", config.camera);
+                messageQueue.push({
+                    command: "camera",
+                    x: config.camera.x,
+                    y: config.camera.y,
+                    z: config.camera.z
+                });
+            }
+
+            // Calculate Delay for LookAt
+            // 5 seconds + (number of messages * MESSAGE_DELAY)
+            const queueDelay = (messageQueue.length * MESSAGE_DELAY) + LOOK_AT_DELAY;
+            console.log(`LookAt will be enabled in ${queueDelay / MESSAGE_DELAY} seconds.`);
+
+            if (enableLookAtTimeout) clearTimeout(enableLookAtTimeout);
+            enableLookAtTimeout = setTimeout(() => {
+                enableLookAt = true;
+                console.log("LookAt is now ENABLED.");
+            }, queueDelay);
+
         }
         console.log("Received Message from Iframe:", event.data);
     }
@@ -140,6 +169,7 @@
         config.autoUnmute = true; // Reset default
         config.showUI = true;
         config.lookAt = false;
+        config.camera = null;
 
         if (optionsOrContainer) {
             if (optionsOrContainer instanceof HTMLElement) {
@@ -149,13 +179,17 @@
                 if (optionsOrContainer.autoUnmute) config.autoUnmute = true;
                 if (optionsOrContainer.showUI === false) config.showUI = false;
                 if (optionsOrContainer.lookAt === true) config.lookAt = true;
+                if (optionsOrContainer.camera) config.camera = optionsOrContainer.camera;
             }
         }
 
         // Initialize Queue Processing
         messageQueue = [];
         if (queueInterval) clearInterval(queueInterval);
-        queueInterval = setInterval(processQueue, 600);
+        queueInterval = setInterval(processQueue, MESSAGE_DELAY);
+
+        enableLookAt = false;
+        if (enableLookAtTimeout) clearTimeout(enableLookAtTimeout);
 
         // Initialize Face Detection if enabled
         if (config.lookAt) {
@@ -485,6 +519,11 @@
         iframe = null;
         overlay = null;
         isLoaded = false;
+        enableLookAt = false;
+        if (enableLookAtTimeout) {
+            clearTimeout(enableLookAtTimeout);
+            enableLookAtTimeout = null;
+        }
 
         cleanupFaceDetection();
 
@@ -541,11 +580,11 @@
             if (lookAtInterval) clearInterval(lookAtInterval);
             lookAtInterval = setInterval(() => {
                 if (window.DigitalHuman && window.DigitalHuman.lookAt) {
-                    // Logic from test: Smoothing
-                    faceState.cx += (faceState.tx - faceState.cx) * 0.2;
-                    faceState.cy += (faceState.ty - faceState.cy) * 0.2;
-
-                    // Let's pass the smoothed coordinates.
+                    // faceState.cx += (faceState.tx - faceState.cx) * 0.2;
+                    // faceState.cy += (faceState.ty - faceState.cy) * 0.2;
+                    
+                    faceState.cx = faceState.tx;
+                    faceState.cy = faceState.ty;
 
                     // Check if we lost tracking for > 3s
                     if (Date.now() - faceState.lastDetection > 3000) {
@@ -556,7 +595,7 @@
                     // Only send if loaded
                     window.DigitalHuman.lookAt(faceState.count, faceState.cx, faceState.cy);
                 }
-            }, 300);
+            }, LOOK_AT_INTERVAL);
 
             console.log("Face Detection Initialized.");
 
@@ -631,6 +670,17 @@
     window.DigitalHuman.init = init;
     window.DigitalHuman.disconnect = disconnect;
 
+    window.DigitalHuman.setCamera = function (x, y, z) {
+        const payload = {
+            command: "camera",
+            x: x,
+            y: y,
+            z: z
+        };
+        console.log("Sending Camera Command:", payload);
+        sendMessageToIframe(payload);
+    };
+
     window.DigitalHuman.sendMessage = function (message) {
         console.log("Sending Message from Parent Site:", message);
         const payload = {
@@ -662,7 +712,7 @@
     };
 
     window.DigitalHuman.lookAt = function (faces, x, y) {
-        if (!isLoaded || !iframe || !iframe.contentWindow) return;
+        if (!isLoaded || !iframe || !iframe.contentWindow || !enableLookAt) return;
 
         const payload = {
             command: "look_at",
