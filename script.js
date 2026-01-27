@@ -172,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             if (window.DigitalHuman && window.DigitalHuman.init) {
-                window.DigitalHuman.init(state.dhStreamId, { autoUnmute: true, showUI: false });
+                window.DigitalHuman.init(state.dhStreamId, { autoUnmute: true, showUI: false, lookAt: true });
                 state.isDhConnected = true;
                 updateDhButtonState();
             } else {

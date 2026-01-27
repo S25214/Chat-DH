@@ -13,7 +13,21 @@
     let queueInterval = null;
     let config = {
         autoUnmute: true,
-        showUI: true
+        showUI: true,
+        lookAt: false
+    };
+
+    // Face Detection State
+    let fd = null;
+    let cameraStream = null; // Replaces 'camera' object from utils
+    let videoElement = null;
+    let faceDetectReqId = null; // Request Animation Frame ID
+    let lookAtInterval = null;
+    let faceState = {
+        cx: 0.5, cy: 0.5, // Current smoothed values
+        tx: 0.5, ty: 0.5, // Target values
+        lastDetection: 0,
+        count: 0
     };
 
     // --- HELPER FUNCTIONS ---
@@ -32,6 +46,20 @@
         `;
         document.body.appendChild(dragShield);
         return dragShield;
+    }
+
+    async function loadScript(src) {
+        return new Promise((resolve, reject) => {
+            if (document.querySelector(`script[src="${src}"]`)) {
+                resolve();
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
     }
 
 
@@ -111,6 +139,7 @@
         let customContainer = null;
         config.autoUnmute = true; // Reset default
         config.showUI = true;
+        config.lookAt = false;
 
         if (optionsOrContainer) {
             if (optionsOrContainer instanceof HTMLElement) {
@@ -119,6 +148,7 @@
                 if (optionsOrContainer.container) customContainer = optionsOrContainer.container;
                 if (optionsOrContainer.autoUnmute) config.autoUnmute = true;
                 if (optionsOrContainer.showUI === false) config.showUI = false;
+                if (optionsOrContainer.lookAt === true) config.lookAt = true;
             }
         }
 
@@ -126,6 +156,11 @@
         messageQueue = [];
         if (queueInterval) clearInterval(queueInterval);
         queueInterval = setInterval(processQueue, 600);
+
+        // Initialize Face Detection if enabled
+        if (config.lookAt) {
+            initFaceDetection();
+        }
 
         let isCustomContainer = false;
 
@@ -450,7 +485,134 @@
         iframe = null;
         overlay = null;
         isLoaded = false;
+
+        cleanupFaceDetection();
+
         console.log("DigitalHuman disconnected.");
+    }
+
+    // --- FACE DETECTION LOGIC ---
+    async function initFaceDetection() {
+        if (fd) return; // Already initialized
+
+        console.log("Initializing Face Detection...");
+        try {
+            await loadScript("https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js");
+            // No longer using camera_utils to ensure mobile selfie camera support
+            // await loadScript("https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js");
+
+            videoElement = document.createElement('video');
+            videoElement.style.display = 'none';
+            videoElement.setAttribute('playsinline', ''); // Critical for iOS
+            videoElement.setAttribute('muted', '');
+            document.body.appendChild(videoElement);
+
+            fd = new FaceDetection({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${f}` });
+            fd.setOptions({ model: 'short', minDetectionConfidence: 0.65 });
+
+            fd.onResults(onFaceResults);
+
+            // Manual Camera Setup for Mobile Selfie Support
+            const constraints = {
+                video: {
+                    facingMode: 'user', // Force front camera
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
+                },
+                audio: false
+            };
+
+            cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+            videoElement.srcObject = cameraStream;
+            await videoElement.play();
+
+            // Start Analysis Loop
+            const processFrame = async () => {
+                if (!fd || !videoElement) return;
+                // Only send if video is ready
+                if (videoElement.readyState >= 2) {
+                    await fd.send({ image: videoElement });
+                }
+                faceDetectReqId = requestAnimationFrame(processFrame);
+            };
+            processFrame();
+
+            // Start sending lookAt commands
+            if (lookAtInterval) clearInterval(lookAtInterval);
+            lookAtInterval = setInterval(() => {
+                if (window.DigitalHuman && window.DigitalHuman.lookAt) {
+                    // Logic from test: Smoothing
+                    faceState.cx += (faceState.tx - faceState.cx) * 0.2;
+                    faceState.cy += (faceState.ty - faceState.cy) * 0.2;
+
+                    // Let's pass the smoothed coordinates.
+
+                    // Check if we lost tracking for > 3s
+                    if (Date.now() - faceState.lastDetection > 3000) {
+                        faceState.tx = 0.5;
+                        faceState.ty = 0.5;
+                    }
+
+                    // Only send if loaded
+                    window.DigitalHuman.lookAt(faceState.count, faceState.cx, faceState.cy);
+                }
+            }, 300);
+
+            console.log("Face Detection Initialized.");
+
+        } catch (e) {
+            console.error("Failed to initialize Face Detection", e);
+        }
+    }
+
+    function onFaceResults(results) {
+        const faces = results.detections;
+        faceState.count = faces ? faces.length : 0;
+
+        if (faces && faces.length > 0) {
+            let wx = 0, wy = 0, tot = 0;
+            // Calculate Weighted Average
+            for (const f of faces) {
+                const b = f.boundingBox;
+                const area = b.width * b.height;
+                wx += b.xCenter * area;
+                wy += b.yCenter * area;
+                tot += area;
+            }
+            faceState.tx = wx / tot;
+            faceState.ty = wy / tot;
+            faceState.lastDetection = Date.now();
+        }
+    }
+
+    function cleanupFaceDetection() {
+        if (faceDetectReqId) {
+            cancelAnimationFrame(faceDetectReqId);
+            faceDetectReqId = null;
+        }
+
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+
+        if (fd) {
+            fd.close();
+            fd = null;
+        }
+
+        if (videoElement && videoElement.parentNode) {
+            videoElement.parentNode.removeChild(videoElement);
+            videoElement = null;
+        }
+
+        if (lookAtInterval) {
+            clearInterval(lookAtInterval);
+            lookAtInterval = null;
+        }
+
+        // Reset state
+        faceState = { cx: 0.5, cy: 0.5, tx: 0.5, ty: 0.5, lastDetection: 0, count: 0 };
     }
 
     // --- INTERNAL LOGIC ---
@@ -497,6 +659,19 @@
         };
         console.log("Sending Job from Parent Site:", payload);
         sendMessageToIframe(payload);
+    };
+
+    window.DigitalHuman.lookAt = function (faces, x, y) {
+        if (!isLoaded || !iframe || !iframe.contentWindow) return;
+
+        const payload = {
+            command: "look_at",
+            faces: faces,
+            x: x,
+            y: y
+        };
+        payload._padding = "||END||";
+        iframe.contentWindow.postMessage(payload, '*');
     };
 
 })();

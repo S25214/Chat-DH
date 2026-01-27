@@ -85,7 +85,8 @@
 <body>
 
     <h1>DigitalHuman Widget Documentation</h1>
-    <p>This guide explains how to install, initialize, and control the DigitalHuman Widget, as well as how to set up your
+    <p>This guide explains how to install, initialize, and control the DigitalHuman Widget, as well as how to set up
+        your
         backend TTS (Text-to-Speech) API to work with the widget.
     <ul>
         <li>Example page: <a href="index_example.html">index_example.html</a></li>
@@ -112,7 +113,8 @@ window.DigitalHuman.init("https://share.streampixel.io/YOUR_STREAM_ID");</code><
     <pre><code>window.DigitalHuman.init("https://share.streampixel.io/YOUR_STREAM_ID", {
     autoUnmute: false, // Default: true. Attempts to unmute automatically.
     showUI: true,      // Default: true. Set to false to hide the UI on init.
-    container: document.getElementById('my-custom-container') // Optional: DOM element to render inside
+    container: document.getElementById('my-custom-container'), // Optional: DOM element to render inside
+    lookAt: true,       // Default: false. If true, enables face detection (via webcam) to control the idle look-at behavior.
 });</code></pre>
 
     <h3>Example: Programmatic Container Creation</h3>
