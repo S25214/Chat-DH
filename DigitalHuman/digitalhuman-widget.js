@@ -18,7 +18,8 @@
         autoUnmute: true,
         showUI: true,
         lookAt: false,
-        camera: null
+        camera: null,
+        microphone: true
     };
 
     // Face Detection State
@@ -170,6 +171,7 @@
         config.showUI = true;
         config.lookAt = false;
         config.camera = null;
+        config.microphone = true;
 
         if (optionsOrContainer) {
             if (optionsOrContainer instanceof HTMLElement) {
@@ -180,6 +182,7 @@
                 if (optionsOrContainer.showUI === false) config.showUI = false;
                 if (optionsOrContainer.lookAt === true) config.lookAt = true;
                 if (optionsOrContainer.camera) config.camera = optionsOrContainer.camera;
+                if (optionsOrContainer.microphone === false) config.microphone = false;
             }
         }
 
@@ -398,7 +401,12 @@
         // 3. Create Iframe
         iframe = document.createElement('iframe');
         iframe.src = streamUrl;
-        iframe.allow = "autoplay *; microphone *; camera *; display-capture *";
+
+        let allowFeatures = "autoplay *; camera *; display-capture *";
+        if (config.microphone) {
+            allowFeatures += "; microphone *";
+        }
+        iframe.allow = allowFeatures;
         iframe.sandbox = "allow-scripts allow-same-origin allow-forms";
         iframe.style.cssText = "width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0;";
         container.appendChild(iframe);
@@ -582,7 +590,7 @@
                 if (window.DigitalHuman && window.DigitalHuman.lookAt) {
                     // faceState.cx += (faceState.tx - faceState.cx) * 0.2;
                     // faceState.cy += (faceState.ty - faceState.cy) * 0.2;
-                    
+
                     faceState.cx = faceState.tx;
                     faceState.cy = faceState.ty;
 

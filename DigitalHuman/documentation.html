@@ -97,9 +97,14 @@
 
 
     <h2>1. Installation</h2>
-    <p>To use the widget, simply include the <code>digitalhuman-widget.js</code> script in your HTML file.</p>
+    <p>To use the widget, include the <code>digitalhuman-widget.js</code> script in your HTML file. You can use the
+        local file or load it from our CDN.</p>
 
+    <h3>Option 1: Local File</h3>
     <pre><code>&lt;script src="digitalhuman-widget.js"&gt;&lt;/script&gt;</code></pre>
+
+    <h3>Option 2: CDN (Recommended)</h3>
+    <pre><code>&lt;script src="https://dhchat.didthat.cc/DigitalHuman/digitalhuman-widget.js"&gt;&lt;/script&gt;</code></pre>
 
     <h2>2. Initialization</h2>
     <p>Initialize the widget using the global <code>DigitalHuman.init</code> method. This should be called after the
@@ -115,6 +120,7 @@ window.DigitalHuman.init("https://share.streampixel.io/YOUR_STREAM_ID");</code><
     showUI: true,      // Default: true. Set to false to hide the UI on init.
     container: document.getElementById('my-custom-container'), // Optional: DOM element to render inside
     lookAt: true,       // Default: false. If true, enables face detection (via webcam) to control the idle look-at behavior.
+    microphone: true    // Default: true. Set to false to disable microphone access for the stream (useful if using dictation on mobile).
 });</code></pre>
 
     <h3>Example: Programmatic Container Creation</h3>
