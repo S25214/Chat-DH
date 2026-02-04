@@ -111,16 +111,16 @@
         script has loaded.</p>
 
     <h3>Basic Usage</h3>
-    <pre><code>// Initialize with the stream URL
-window.DigitalHuman.init("https://share.streampixel.io/YOUR_STREAM_ID");</code></pre>
+    <pre><code>// Initialize with the App ID (previously Stream ID)
+window.DigitalHuman.init("YOUR_APP_ID"); // e.g., "6744fb98094f..."</code></pre>
 
     <h3>Advanced Usage (with Options)</h3>
-    <pre><code>window.DigitalHuman.init("https://share.streampixel.io/YOUR_STREAM_ID", {
+    <pre><code>window.DigitalHuman.init("YOUR_APP_ID", {
     autoUnmute: false, // Default: true. Attempts to unmute automatically.
     showUI: true,      // Default: true. Set to false to hide the UI on init.
     container: document.getElementById('my-custom-container'), // Optional: DOM element to render inside
     lookAt: true,       // Default: false. If true, enables face detection (via webcam) to control the idle look-at behavior.
-    microphone: true    // Default: true. Set to false to disable microphone access for the stream (useful if using dictation on mobile).
+    microphone: true    // Default: true. Set to false to disable microphone access for the stream.
 });</code></pre>
 
     <h3>Example: Programmatic Container Creation</h3>
@@ -133,7 +133,7 @@ myContainer.style.border = "2px solid #333";
 document.body.appendChild(myContainer);
 
 // 2. Initialize the widget into the new container
-window.DigitalHuman.init("https://share.streampixel.io/YOUR_STREAM_ID", {
+window.DigitalHuman.init("YOUR_APP_ID", {
     container: myContainer
 });</code></pre>
 
@@ -147,12 +147,26 @@ window.DigitalHuman.init("https://share.streampixel.io/YOUR_STREAM_ID", {
     </p>
 
     <h3><code>disconnect()</code></h3>
-    <p>Removes the widget from the DOM and cleans up event listeners.</p>
+    <p>Removes the widget from the DOM and cleans up event listeners and stream connections.</p>
     <pre><code>window.DigitalHuman.disconnect();</code></pre>
 
+    <h3><code>lookAt(faces, x, y)</code></h3>
+    <p>Directs the digital human's gaze. Coordinates are normalized (0.0 to 1.0).</p>
+    <ul>
+        <li><strong>faces</strong> (number): Number of faces detected (usually 0 or 1).</li>
+        <li><strong>x</strong> (number): Horizontal position (0.0 = left, 1.0 = right).</li>
+        <li><strong>y</strong> (number): Vertical position (0.0 = top, 1.0 = bottom).</li>
+    </ul>
+    <pre><code>// Look at center
+window.DigitalHuman.lookAt(1, 0.5, 0.5);</code></pre>
+
     <h3><code>sendMessage(message)</code></h3>
-    <p>Sends a generic message command to the pixel streaming instance. (more will be added soon)</p>
-    <pre><code>window.DigitalHuman.sendMessage("uiOn");
+    <p>Sends a generic message command to the pixel streaming instance.</p>
+    <pre><code>// Unmute the stream audio
+window.DigitalHuman.sendMessage("unMuteAudio");
+
+// Other generic commands
+window.DigitalHuman.sendMessage("uiOn");
 window.DigitalHuman.sendMessage("uiOff");</code></pre>
 
     <h3><code>setConfigID(configId)</code></h3>

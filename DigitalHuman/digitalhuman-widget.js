@@ -84,7 +84,7 @@
             // Queue Auto-Unmute
             if (config.autoUnmute) {
                 console.log("Queueing Auto-unmuting Audio (Config Enabled)");
-                messageQueue.push({ message: 'unMuteAudio' });
+                messageQueue.push({ command: 'unMuteAudio' });
                 if (overlay) {
                     overlay.remove();
                     overlay = null;
@@ -151,6 +151,17 @@
         data._padding = "||END||";
         iframe.contentWindow.postMessage(data, '*');
         console.log("Processed message from queue:", data);
+    }
+
+    // --- DETERMINE BASE URL ---
+    // Capture the script's location to resolve relative paths for assets (like widget-client.html)
+    // regardless of where the script is run from.
+    const currentScript = document.currentScript;
+    let baseUrl = "";
+    if (currentScript) {
+        const src = currentScript.src;
+        // removing "digitalhuman-widget.js" from the end
+        baseUrl = src.substring(0, src.lastIndexOf('/') + 1);
     }
 
     // --- MAIN INIT FUNCTION ---
@@ -400,7 +411,112 @@
 
         // 3. Create Iframe
         iframe = document.createElement('iframe');
-        iframe.src = streamUrl;
+
+        // Define the HTML content to be inlined
+        const iframeContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamPixel Widget</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #stream-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* Hide unwanted SDK Overlays */
+        #connectOverlay,
+        #errorOverlay,
+        .textDisplayState,
+        .clickableState,
+        #infoOverlay {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        /* Loading Spinner */
+        #custom-loader {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="custom-loader">
+        <div class="spinner"></div>
+    </div>
+    <div id="stream-container"></div>
+    <script type="module" src="${baseUrl}widget-bundle.js"><\/script>
+    <script>
+        // Forward "loadingComplete" to parent when pure bundle logic might be delayed
+        // or just rely on the bundle's logic.
+        // For now, the bundle handles it.
+    </script>
+</body>
+</html>
+        `;
+
+        // Use srcdoc to inject the HTML content
+        iframe.srcdoc = iframeContent;
+        console.log("Loading inlined widget client.");
+
+        iframe.onload = () => {
+            // Extract Stream ID from the original URL if necessary, or assume input is ID
+            let sId = streamUrl;
+            try {
+                const urlObj = new URL(streamUrl);
+                // extracting the last part of the path as ID
+                const parts = urlObj.pathname.split('/').filter(p => p);
+                if (parts.length > 0) {
+                    sId = parts[parts.length - 1];
+                }
+            } catch (e) {
+                // Not a URL, stick with original value
+            }
+
+            console.log("Initializing WebSDK with Stream ID:", sId);
+            iframe.contentWindow.postMessage({
+                command: 'init_sdk',
+                streamId: sId,
+                config: config
+            }, '*');
+        };
 
         let allowFeatures = "autoplay *; camera *; display-capture *";
         if (config.microphone) {
@@ -422,7 +538,7 @@
 
         overlay.addEventListener('click', function () {
             if (!isLoaded) return;
-            iframe.contentWindow.postMessage({ message: 'unMuteAudio' }, '*');
+            messageQueue.push({ command: 'unMuteAudio' });
             console.log("Unmuted Audio");
             overlay.remove();
             overlay = null; // Clear reference
