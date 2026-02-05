@@ -18,6 +18,10 @@ class LocalToolsClient {
                         timezone: {
                             type: "string",
                             description: "IANA timezone identifier. Defaults to local."
+                        },
+                        locale: {
+                            type: "string",
+                            description: "Locale identifier (e.g., 'en-US', 'th-TH'). Defaults to browser's locale."
                         }
                     }
                 }
@@ -31,6 +35,10 @@ class LocalToolsClient {
                         timezone: {
                             type: "string",
                             description: "IANA timezone identifier. Defaults to local."
+                        },
+                        locale: {
+                            type: "string",
+                            description: "Locale identifier (e.g., 'en-US', 'th-TH'). Defaults to browser's locale."
                         }
                     }
                 }
@@ -44,6 +52,10 @@ class LocalToolsClient {
                         timezone: {
                             type: "string",
                             description: "IANA timezone identifier. Defaults to local."
+                        },
+                        locale: {
+                            type: "string",
+                            description: "Locale identifier (e.g., 'en-US', 'th-TH'). Defaults to browser's locale."
                         }
                     }
                 }

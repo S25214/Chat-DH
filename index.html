@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="mobile.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="DigitalHuman/digitalhuman-widget.js"></script>
 </head>
@@ -146,12 +148,7 @@
                         <input type="text" id="mcp-url-input" placeholder="http://localhost:8000/sse" style="flex:1;">
                         <button id="add-mcp-btn" class="secondary-btn"><i class="fa-solid fa-plus"></i></button>
                     </div>
-                    <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                        <input type="checkbox" id="mcp-proxy-check" style="width: auto;">
-                        <label for="mcp-proxy-check"
-                            style="margin:0; font-size: 0.85rem; color: var(--text-secondary);">Use CORS Proxy (try if
-                            connection fails)</label>
-                    </div>
+
                 </div>
                 <div class="mcp-server-list" id="mcp-server-list">
                     <!-- MCP Servers injected here -->

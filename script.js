@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeModalBtns = document.querySelectorAll('.close-modal-btn');
 
     const mcpUrlInputEl = document.getElementById('mcp-url-input');
-    const mcpProxyCheckEl = document.getElementById('mcp-proxy-check');
+
     const addMcpBtn = document.getElementById('add-mcp-btn');
     const mcpServerListEl = document.getElementById('mcp-server-list');
 
@@ -57,6 +57,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.ttsUrl) document.getElementById('tts-url').value = state.ttsUrl;
     if (state.ttsToken) document.getElementById('tts-token').value = state.ttsToken;
     if (state.ttsParams) document.getElementById('tts-params').value = state.ttsParams;
+
+    if (state.ttsParams) document.getElementById('tts-params').value = state.ttsParams;
+
+    // -- Marked Configuration --
+    if (window.marked && window.hljs) {
+        window.marked.setOptions({
+            highlight: function (code, lang) {
+                const language = window.hljs.getLanguage(lang) ? lang : 'plaintext';
+                return window.hljs.highlight(code, { language }).value;
+            },
+            langPrefix: 'hljs language-'
+        });
+    }
 
     if (!state.apiKey) {
         openModal(settingsModal);
@@ -232,10 +245,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Auto-expand input
+    messageInputEl.addEventListener('input', () => {
+        messageInputEl.style.height = 'auto';
+        messageInputEl.style.height = (messageInputEl.scrollHeight) + 'px';
+    });
+
     // -- MCP Settings UI Events --
     addMcpBtn.addEventListener('click', () => {
         const url = mcpUrlInputEl.value.trim();
-        const useProxy = mcpProxyCheckEl.checked;
+        const useProxy = true;
 
         if (url) {
             // Check for duplicates (by URL)
@@ -245,7 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.mcpManager.updateServers(state.mcpServers);
                 renderMcpList();
                 mcpUrlInputEl.value = '';
-                mcpProxyCheckEl.checked = false;
+
             } else {
                 alert('Server already added.');
             }
@@ -317,8 +336,52 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadHistory(botId) {
         messagesContainerEl.innerHTML = ''; // clear previous
         const history = window.storageManager.getHistory(botId);
-        history.forEach(msg => appendMessageUI(msg));
+        const groupedHistory = groupMessages(history);
+        groupedHistory.forEach(msg => appendMessageUI(msg));
         scrollToBottom();
+    }
+
+    // Helper: Group consecutive bot/model/function messages into a single UI turn
+    function groupMessages(history) {
+        const grouped = [];
+        let currentGroup = null;
+
+        history.forEach(msg => {
+            if (msg.role === 'user') {
+                if (currentGroup) {
+                    grouped.push(currentGroup);
+                    currentGroup = null;
+                }
+                grouped.push(msg);
+            } else {
+                // Role is model (bot) or function
+                if (!currentGroup) {
+                    currentGroup = {
+                        role: 'bot', // UI role
+                        content: '',
+                        timestamp: msg.timestamp,
+                        parts: []
+                    };
+                }
+
+                // Merge content/parts
+                if (msg.parts) {
+                    currentGroup.parts = currentGroup.parts.concat(msg.parts);
+                }
+                // If there's direct content (unlikely mixed with parts in storage, but possible)
+                if (msg.content) {
+                    // If it's the final text response, it might be in content or parts
+                    // We'll treat it as a text part for UI rendering consistency
+                    currentGroup.parts.push({ text: msg.content });
+                }
+            }
+        });
+
+        if (currentGroup) {
+            grouped.push(currentGroup);
+        }
+
+        return grouped;
     }
 
     async function sendMessage() {
@@ -337,12 +400,19 @@ document.addEventListener('DOMContentLoaded', () => {
         window.storageManager.appendMessage(state.currentBotId, 'user', content);
 
         messageInputEl.value = '';
+        messageInputEl.style.height = 'auto'; // Reset height
         scrollToBottom();
 
-        // Add loading state
-        const loadingId = 'loading-' + Date.now();
-        const loadingMsg = { role: 'bot', content: '<i class="fa-solid fa-spinner fa-spin"></i> Typing...', id: loadingId };
-        appendMessageUI(loadingMsg);
+        // Prepare combined bot message immediately
+        const botMsgId = 'bot-' + Date.now();
+        const botDisplayMsg = {
+            role: 'bot',
+            content: '',
+            id: botMsgId,
+            parts: [],
+            isThinking: true
+        };
+        appendMessageUI(botDisplayMsg);
         scrollToBottom();
 
         try {
@@ -350,48 +420,92 @@ document.addEventListener('DOMContentLoaded', () => {
             const bot = state.bots.find(b => b.id === state.currentBotId);
             const history = window.storageManager.getHistory(state.currentBotId);
 
-            // Prepare context for Gemini
-            // The history from storage ALREADY includes the new user message we just added.
+            const apiHistory = history.map(msg => {
+                if (msg.parts) {
+                    return { role: msg.role === 'user' ? 'user' : (msg.role === 'function' ? 'function' : 'model'), parts: msg.parts };
+                }
+                return {
+                    role: msg.role === 'user' ? 'user' : 'model',
+                    parts: [{ text: msg.content }]
+                };
+            });
 
-            const apiHistory = history.map(msg => ({
-                role: msg.role === 'user' ? 'user' : 'model',
-                parts: [{ text: msg.content }]
-            }));
+            // Callback for live updates
+            const onUpdate = (newPart) => {
+                // Remove thinking state visually if we have real content
+                botDisplayMsg.isThinking = false;
+                botDisplayMsg.parts.push(newPart);
 
-            // Note: Gemini API treats the last item in contents as the prompt.
+                // Re-render the specific message
+                const msgEl = document.getElementById(botMsgId);
+                if (msgEl) {
+                    // Re-use logic from appendMessageUI but just get the specific content
+                    const contentHtml = renderMessageContent(botDisplayMsg);
+                    const contentEl = msgEl.querySelector('.message-content');
+                    if (contentEl) {
+                        contentEl.innerHTML = contentHtml;
+                        // Post-process highlight
+                        contentEl.querySelectorAll('pre code').forEach(block => {
+                            if (window.hljs) window.hljs.highlightElement(block);
+                        });
+                        addCopyButtons(msgEl);
+                    }
+                    scrollToBottom();
+                }
+            };
 
-            const responseText = await callGeminiAPI(state.apiKey, state.modelName, bot.instruction, apiHistory);
+            const responseText = await callGeminiAPI(state.apiKey, state.modelName, bot.instruction, apiHistory, onUpdate);
 
-            // Remove loading
-            document.getElementById(loadingId).remove();
-
-            // Save and Display Bot Response
+            // Final save (The individual parts were saved inside callGeminiAPI, but we save the final text response here)
             window.storageManager.appendMessage(state.currentBotId, 'bot', responseText);
-            appendMessageUI({ role: 'bot', content: responseText });
+
+            // Final UI update
+            onUpdate({ text: responseText });
 
             // Send TTS if connected
             if (state.isDhConnected && state.ttsUrl) {
                 if (window.DigitalHuman && window.DigitalHuman.sendJob) {
-                    let params = {};
                     try {
                         params = state.ttsParams ? JSON.parse(state.ttsParams) : {};
                     } catch (e) {
                         console.error("Failed to parse TTS Params", e);
                     }
-                    window.DigitalHuman.sendJob(responseText, state.ttsUrl, state.ttsToken, params);
+
+                    // Sanitize text for TTS
+                    let ttsText = responseText;
+                    // Replace code blocks
+                    ttsText = ttsText.replace(/```[\s\S]*?```/g, "code block");
+                    // Replace links
+                    ttsText = ttsText.replace(/https?:\/\/[^\s)]+/g, "link");
+
+                    window.DigitalHuman.sendJob(ttsText, state.ttsUrl, state.ttsToken, params);
                 }
             }
 
         } catch (err) {
-            document.getElementById(loadingId).remove();
-            appendMessageUI({ role: 'bot', content: `**Error:** ${err.message}` });
+            const msgEl = document.getElementById(botMsgId);
+            if (msgEl) {
+                const contentEl = msgEl.querySelector('.message-content');
+                if (contentEl) {
+                    contentEl.innerHTML += `<div class="error-text">❌ Error: ${err.message}</div>`;
+                }
+            }
             console.error(err);
         }
         scrollToBottom();
     }
 
-    async function callGeminiAPI(apiKey, modelName, systemInstruction, history) {
+    // --- Base Instruction ---
+    const BASE_SYSTEM_INSTRUCTION = `
+    When a tool returns any information, you MUST explicitly tell the user the relevant information in their language. NEVER stay silent after a tool use.
+    `;
+    // ------------------------
+
+    async function callGeminiAPI(apiKey, modelName, userSystemInstruction, history, onUpdate) {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+        // Combine Base + User Instruction
+        const finalSystemInstruction = `${BASE_SYSTEM_INSTRUCTION}\n\n${userSystemInstruction || ''}`.trim();
 
         // Prepare Tools
         const mcpTools = window.mcpManager.getAllTools();
@@ -401,6 +515,44 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let currentHistory = [...history];
+
+        // --- History Truncation ---
+        const MAX_HISTORY_TURNS = 30;
+
+        function truncateConversation(historyArr, maxTurns) {
+            // Group into turns
+            // Turn = User Message + (following Bot/Model/Function messages)
+            let turns = [];
+            let currentTurn = [];
+
+            for (let i = 0; i < historyArr.length; i++) {
+                const msg = historyArr[i];
+                if (msg.role === 'user') {
+                    if (currentTurn.length > 0) {
+                        turns.push(currentTurn);
+                    }
+                    currentTurn = [msg];
+                } else {
+                    currentTurn.push(msg);
+                }
+            }
+            if (currentTurn.length > 0) turns.push(currentTurn);
+
+            if (turns.length <= maxTurns) return historyArr;
+
+            console.log(`[Truncation] History has ${turns.length} turns. Truncating to ${maxTurns}.`);
+
+            const firstTurn = turns[0];
+            const lastTurns = turns.slice(-(maxTurns - 1));
+
+            const newTurns = [firstTurn, ...lastTurns];
+
+            return newTurns.flat();
+        }
+
+        currentHistory = truncateConversation(currentHistory, MAX_HISTORY_TURNS);
+        // --------------------------
+
         let keepGoing = true;
         let finalResponseText = '';
 
@@ -414,7 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const payload = {
                 contents: currentHistory,
                 systemInstruction: {
-                    parts: [{ text: systemInstruction }]
+                    parts: [{ text: finalSystemInstruction }]
                 }
             };
 
@@ -424,27 +576,69 @@ document.addEventListener('DOMContentLoaded', () => {
                 // payload.tool_config = { function_calling_config: { mode: "AUTO" } };
             }
 
-            console.log("Calling Gemini API", payload);
+            let retryCount = 0;
+            const MAX_RETRIES = 3;
+            let validResponse = false;
+            let data = null;
+            let parts = [];
+            let functionCalls = [];
 
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            while (retryCount < MAX_RETRIES && !validResponse) {
+                try {
+                    console.log(`Calling Gemini API (Attempt ${retryCount + 1}/${MAX_RETRIES})`, payload);
 
-            const data = await response.json();
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
 
-            if (!response.ok) {
-                throw new Error(data.error?.message || 'Gemini API Error');
+                    data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.error?.message || 'Gemini API Error');
+                    }
+
+                    if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
+                        parts = data.candidates[0].content.parts;
+                        functionCalls = parts.filter(part => part.functionCall).map(part => part.functionCall);
+                        const textParts = parts.filter(p => p.text).map(p => p.text).join('').trim();
+
+                        // Valid if: Has function calls OR Has non-empty text
+                        if (functionCalls.length > 0 || textParts.length > 0) {
+                            validResponse = true;
+                        } else {
+                            console.warn(`[Gemini] Empty response received. Retry ${retryCount + 1}/${MAX_RETRIES}`);
+                            retryCount++;
+                        }
+                    } else if (!data.candidates || data.candidates.length === 0) {
+                        // Truly empty response object
+                        console.warn(`[Gemini] No candidates. Retry ${retryCount + 1}/${MAX_RETRIES}`);
+                        retryCount++;
+                    } else {
+                        // Default case
+                        validResponse = true; // technically a response, maybe just blocked?
+                    }
+
+                } catch (e) {
+                    console.error("[Gemini] Fetch error during retry loop", e);
+                    retryCount++;
+                    // Wait a bit before retry?
+                    await new Promise(r => setTimeout(r, 1000));
+                }
             }
 
-            if (!data.candidates || data.candidates.length === 0) {
-                return "No response from Gemini.";
+            if (!validResponse) {
+                return "No valid response from Gemini after retries.";
             }
 
+            // At this point we have 'data' and likely 'parts' populated from the last success
             const candidate = data.candidates[0];
             const content = candidate.content;
-            const parts = content.parts || [];
+            // parts already populated above
+            if (parts.length === 0 && content.parts) {
+                parts = content.parts;
+            }
 
             // Add assistant response to history
             currentHistory.push({
@@ -453,7 +647,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             // Check for function calls
-            const functionCalls = parts.filter(p => p.functionCall);
+            // functionCalls is already populated from the retry loop above
 
             if (functionCalls.length > 0) {
                 console.group(`[LLM] 🤖 Tool Execution Group`);
@@ -461,7 +655,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const functionResponses = [];
 
                 for (const call of functionCalls) {
-                    const fc = call.functionCall;
+                    const fc = call; // Already unwrapped in retry loop
+
+                    // UI UPDATE: Tool Called
+                    if (onUpdate) onUpdate({ functionCall: fc });
+
                     try {
                         console.log(`%c🛠️ Calling Tool: ${fc.name}`, 'color: #2979FF; font-weight: bold;', fc.args);
                         const result = await window.mcpManager.executeTool(fc.name, fc.args);
@@ -484,7 +682,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                 try {
                                     // Try to parse as JSON if it looks like it
                                     if (textContent.trim().startsWith('{') || textContent.trim().startsWith('[')) {
-                                        responseContent = JSON.parse(textContent);
+                                        const parsed = JSON.parse(textContent);
+                                        // Gemini 'Struct' MUST be a JSON object (keyed map), not an Array or Primitive
+                                        if (Array.isArray(parsed) || typeof parsed !== 'object' || parsed === null) {
+                                            responseContent = { result: parsed };
+                                        } else {
+                                            responseContent = parsed;
+                                        }
                                     } else {
                                         responseContent = { result: textContent };
                                     }
@@ -494,20 +698,34 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         }
 
+                        // Final Safety Check: Ensure responseContent is an object
+                        if (typeof responseContent !== 'object' || responseContent === null || Array.isArray(responseContent)) {
+                            responseContent = { result: responseContent };
+                        }
+
+                        const fResponse = {
+                            name: fc.name,
+                            response: responseContent
+                        };
+
                         functionResponses.push({
-                            functionResponse: {
-                                name: fc.name,
-                                response: { name: fc.name, content: responseContent }
-                            }
+                            functionResponse: fResponse
                         });
+
+                        // UI UPDATE: Tool Finished
+                        if (onUpdate) onUpdate({ functionResponse: fResponse });
+
                     } catch (e) {
                         console.error(`Tool execution failed for ${fc.name}`, e);
+                        const fResponse = {
+                            name: fc.name,
+                            response: { error: e.message }
+                        };
                         functionResponses.push({
-                            functionResponse: {
-                                name: fc.name,
-                                response: { name: fc.name, content: { error: e.message } }
-                            }
+                            functionResponse: fResponse
                         });
+                        // UI UPDATE: Tool Error
+                        if (onUpdate) onUpdate({ functionResponse: fResponse });
                     }
                 }
 
@@ -518,6 +736,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     role: 'function',
                     parts: functionResponses
                 });
+
+                // --- PERSISTENCE: Save Tool Execution Steps ---
+                // 1. Save the Model's Request (The function call)
+                // We use the 'parts' from the model response above
+                window.storageManager.appendMessage(state.currentBotId, 'model', '', parts);
+
+                // 2. Save the Function Result
+                window.storageManager.appendMessage(state.currentBotId, 'function', '', functionResponses);
+                // ---------------------------------------------
 
                 // Loop continues to get the model's interpretation of results
                 keepGoing = true;
@@ -531,7 +758,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        return finalResponseText || "Finished tool execution.";
+        return finalResponseText;
     }
 
     function loadMcpServers() {
@@ -569,6 +796,110 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function renderMessageContent(msg) {
+        let contentHtml = '';
+
+        // Handle structured parts
+        if (msg.parts && msg.parts.length > 0) {
+            for (let i = 0; i < msg.parts.length; i++) {
+                const part = msg.parts[i];
+
+                if (part.functionCall) {
+                    const fc = part.functionCall;
+                    // Check if next part is corresponding response
+                    let nextPart = msg.parts[i + 1];
+                    let fr = null;
+                    if (nextPart && nextPart.functionResponse && nextPart.functionResponse.name === fc.name) {
+                        fr = nextPart.functionResponse;
+                        i++; // Skip next iteration
+                    }
+
+                    contentHtml += `
+                        <details class="tool-call">
+                            <summary>Used Tool: <strong>${fc.name}</strong></summary>
+                            <pre>${JSON.stringify(fc.args, null, 2)}</pre>
+                            ${fr ? `<pre>${JSON.stringify(fr.response, null, 2)}</pre>` : ''}
+                        </details>
+                    `;
+                } else if (part.functionResponse) {
+                    // Orphan response (shouldn't happen if paired above, but good fallback)
+                    contentHtml += `
+                        <details class="tool-response">
+                            <summary>Tool Output: <strong>${part.functionResponse.name}</strong></summary>
+                            <pre>${JSON.stringify(part.functionResponse.response, null, 2)}</pre>
+                        </details>
+                    `;
+                } else if (part.text) {
+                    let textHtml = (!window.marked) ? part.text : window.marked.parse(part.text);
+                    textHtml = enhanceMessageHtml(textHtml);
+                    contentHtml += `<div class="text-content">${textHtml}</div>`;
+                }
+            }
+        }
+
+        // Fallback or explicit content
+        if ((!msg.parts || msg.parts.length === 0) && msg.content) {
+            let textHtml = (!window.marked) ? msg.content : window.marked.parse(msg.content);
+            textHtml = enhanceMessageHtml(textHtml);
+            contentHtml += `<div class="text-content">${textHtml}</div>`;
+        }
+
+        if (msg.isThinking) {
+            contentHtml += `<div class="thinking-state"><i class="fa-solid fa-spinner fa-spin"></i> Thinking...</div>`;
+        }
+
+        return contentHtml;
+    }
+
+    // --- Rich Media Helper ---
+    function enhanceMessageHtml(html) {
+        if (!html) return html;
+
+        const div = document.createElement('div');
+        div.innerHTML = html;
+
+        const links = div.querySelectorAll('a');
+        links.forEach(link => {
+            const href = link.href;
+            const text = link.innerText;
+
+            // Image Regex
+            if (/\.(jpeg|jpg|gif|png|webp)($|\?)/i.test(href)) {
+                // Replace link with image
+                const img = document.createElement('img');
+                img.src = href;
+                img.alt = text || 'Chat Image';
+                img.className = 'chat-media-img';
+                img.loading = 'lazy';
+
+                // If the link text is same as URL or "Image", just replace. 
+                // If it has specific label, maybe keep it? Let's just replace for now as per req.
+                link.replaceWith(img);
+                return;
+            }
+
+            // YouTube Regex
+            // Covers youtube.com/watch?v=ID and youtu.be/ID
+            const ytMatch = href.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})/);
+            if (ytMatch && ytMatch[1]) {
+                const vidId = ytMatch[1];
+                const wrapper = document.createElement('div');
+                wrapper.className = 'chat-media-video-wrapper';
+
+                const iframe = document.createElement('iframe');
+                iframe.src = `https://www.youtube-nocookie.com/embed/${vidId}`;
+                iframe.className = 'chat-media-video';
+                iframe.allow = 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture';
+                iframe.allowFullscreen = true;
+
+                wrapper.appendChild(iframe);
+                link.replaceWith(wrapper);
+            }
+        });
+
+        return div.innerHTML;
+    }
+
     function appendMessageUI(msg) {
         // Determine role class
         const isUser = msg.role === 'user';
@@ -578,9 +909,137 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const avatar = isUser ? '<i class="fa-solid fa-user"></i>' : (state.bots.find(b => b.id === state.currentBotId)?.avatar || '🤖');
 
-        // Render Markdown for bot messages content
-        // Ensure marked is available
-        const contentHtml = (isUser || !window.marked) ? msg.content : window.marked.parse(msg.content);
+        // Logic split into renderMessageContent for re-use
+        const contentHtml = renderMessageContent(msg);
+
+        if (!contentHtml.trim() && !msg.isThinking) return;
+
+        msgDiv.innerHTML = `
+            <div class="bot-avatar">${avatar}</div>
+            <div class="message-content">${contentHtml}</div>
+        `;
+
+        messagesContainerEl.appendChild(msgDiv);
+
+        // Post-process highlight
+        msgDiv.querySelectorAll('pre code').forEach(block => {
+            if (window.hljs) window.hljs.highlightElement(block);
+        });
+
+        addCopyButtons(msgDiv);
+    }
+
+    function addCopyButtons(msgElement) {
+        const contentEl = msgElement.querySelector('.message-content');
+        if (!contentEl) return;
+
+        // 1. Message Copy Button
+        if (!contentEl.querySelector('.msg-copy-btn')) {
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-btn msg-copy-btn';
+            copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+            copyBtn.title = "Copy Message";
+            copyBtn.onclick = () => {
+                // Copy text only, avoiding button text if any (though buttons are usually excluded by innerText if done right, explicit exclusion is safer)
+                // Simplest: just innerText of content
+                copyToClipboard(contentEl.innerText, copyBtn);
+            };
+            contentEl.appendChild(copyBtn);
+        }
+
+        // 2. Code Block Copy Buttons
+        const pres = contentEl.querySelectorAll('pre');
+        pres.forEach(pre => {
+            if (pre.querySelector('.code-copy-btn')) return;
+
+            // Check if it's a code block (usually has <code> inside)
+            // But even if not, we can allow copying pre content
+            const btn = document.createElement('button');
+            btn.className = 'copy-btn code-copy-btn';
+            btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy';
+            btn.onclick = (e) => {
+                e.stopPropagation(); // Prevent message copy trigger if overlapping
+                const code = pre.querySelector('code') ? pre.querySelector('code').innerText : pre.innerText;
+                copyToClipboard(code, btn);
+            };
+            pre.appendChild(btn);
+        });
+    }
+
+    function copyToClipboard(text, btnElement) {
+        navigator.clipboard.writeText(text).then(() => {
+            const originalHtml = btnElement.innerHTML;
+            btnElement.innerHTML = '<i class="fa-solid fa-check"></i>';
+            setTimeout(() => {
+                btnElement.innerHTML = originalHtml;
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            const originalHtml = btnElement.innerHTML;
+            btnElement.innerHTML = '<i class="fa-solid fa-times"></i>';
+            setTimeout(() => {
+                btnElement.innerHTML = originalHtml;
+            }, 2000);
+        });
+    }
+
+    function appendMessageUI_OLD(msg) {
+        // Determine role class
+        const isUser = msg.role === 'user';
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${isUser ? 'user' : 'bot'}`;
+        if (msg.id) msgDiv.id = msg.id;
+
+        const avatar = isUser ? '<i class="fa-solid fa-user"></i>' : (state.bots.find(b => b.id === state.currentBotId)?.avatar || '🤖');
+
+        let contentHtml = '';
+
+        // Handle structured parts (Function Calls / Responses)
+        if (msg.parts && msg.parts.length > 0) {
+
+            // Check for Function Calls (Model Role)
+            const functionCalls = msg.parts.filter(p => p.functionCall).map(p => p.functionCall);
+            if (functionCalls.length > 0) {
+                functionCalls.forEach(fc => {
+                    contentHtml += `
+                        <details class="tool-call">
+                            <summary>🛠️ Used Tool: <strong>${fc.name}</strong></summary>
+                            <pre>${JSON.stringify(fc.args, null, 2)}</pre>
+                        </details>
+                    `;
+                });
+            }
+
+            // Check for Function Responses (Function Role)
+            const functionResponses = msg.parts.filter(p => p.functionResponse).map(p => p.functionResponse);
+            if (functionResponses.length > 0) {
+                functionResponses.forEach(fr => {
+                    contentHtml += `
+                        <details class="tool-response">
+                            <summary>✅ Tool Output: <strong>${fr.name}</strong></summary>
+                            <pre>${JSON.stringify(fr.response, null, 2)}</pre>
+                        </details>
+                    `;
+                });
+            }
+
+            // Check for regular text in parts
+            const textParts = msg.parts.filter(p => p.text).map(p => p.text).join('\n');
+            if (textParts) {
+                const textHtml = (isUser || !window.marked) ? textParts : window.marked.parse(textParts);
+                contentHtml += `<div class="text-content">${textHtml}</div>`;
+            }
+
+        } else {
+            // Fallback for simple content string
+            contentHtml = (isUser || !window.marked) ? msg.content : window.marked.parse(msg.content);
+        }
+
+        // If content is empty (e.g. purely internal tool call with no UI rep needed, though we just added rep), 
+        // we might still have an empty bubble if we don't check.
+        // However, we just added HTML for tool calls, so it shouldn't be empty unless msg was truly empty.
+
+        if (!contentHtml.trim()) return; // Don't show empty bubbles
 
         msgDiv.innerHTML = `
             <div class="bot-avatar">${avatar}</div>

@@ -90,13 +90,17 @@ class StorageManager {
         localStorage.setItem(this.CHATS_KEY, JSON.stringify(chats));
     }
 
-    appendMessage(botId, role, content) {
+    appendMessage(botId, role, content, parts = null) {
         const history = this.getHistory(botId);
-        history.push({
+        const message = {
             role,
             content,
             timestamp: Date.now()
-        });
+        };
+        if (parts) {
+            message.parts = parts;
+        }
+        history.push(message);
         this.saveHistory(botId, history);
         return history;
     }
