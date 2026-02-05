@@ -3,6 +3,11 @@
     .app-container {
         position: relative;
         overflow: hidden;
+        /* Scale down to 75% */
+        width: 125%;
+        height: 125%;
+        transform: scale(0.80);
+        transform-origin: top left;
     }
 
     .sidebar {

@@ -322,7 +322,7 @@ body {
 .message {
     display: flex;
     gap: 1rem;
-    max-width: 80%;
+    max-width: 92%;
 }
 
 .message.user {
