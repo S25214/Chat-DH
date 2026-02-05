@@ -24,7 +24,20 @@ body {
     background-color: var(--bg-color);
     color: var(--text-primary);
     height: 100dvh;
+    height: 100dvh;
     overflow: hidden;
+}
+
+/* Ensure sidebar toggle button is hidden on mobile mobile.css usually handles mobile layout overrides, 
+   but we can enforce it here via media query or specific class logic if needed. 
+   However, the user asked "not for the mobile page".
+   The mobile view uses a different layout (absolute sidebar). 
+   Let's check if we should hide the button in general mobile view.
+*/
+@media (max-width: 768px) {
+    #sidebar-toggle-btn {
+        display: none !important;
+    }
 }
 
 /* App Layout */
@@ -40,6 +53,63 @@ body {
     display: flex;
     flex-direction: column;
     padding: 1rem;
+    transition: width 0.3s ease;
+    overflow-x: hidden;
+    /* Ensure content doesn't spill when collapsing */
+}
+
+/* Sidebar Collapsed State */
+/* Sidebar Collapsed State - Desktop Only */
+@media (min-width: 769px) {
+    .sidebar.collapsed {
+        width: 60px;
+        padding: 1rem 0.5rem;
+    }
+
+    .sidebar.collapsed .sidebar-header h2,
+    .sidebar.collapsed #settings-btn,
+    .sidebar.collapsed .bot-info,
+    .sidebar.collapsed .primary-btn {
+        display: none !important;
+    }
+
+    .sidebar.collapsed .sidebar-header {
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+
+    .sidebar.collapsed .bot-item {
+        justify-content: center;
+        padding: 0.5rem;
+    }
+
+    .sidebar.collapsed .bot-avatar {
+        margin-right: 0;
+    }
+
+    .sidebar.collapsed .bot-list {
+        margin-bottom: 0.5rem;
+    }
+
+    .sidebar.collapsed #create-bot-btn {
+        display: flex !important;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border-radius: 50%;
+        margin: 0 auto;
+        font-size: 0;
+    }
+
+    .sidebar.collapsed #create-bot-btn i {
+        font-size: 1rem;
+        margin: 0;
+    }
+
+    .sidebar.collapsed #create-bot-btn span {
+        display: none;
+    }
 }
 
 .chat-area {
@@ -48,6 +118,7 @@ body {
     flex-direction: column;
     position: relative;
     background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
+    min-width: 0;
 }
 
 /* Sidebar Components */
@@ -92,6 +163,7 @@ body {
     align-items: center;
     font-size: 1.2rem;
     margin-right: 0.75rem;
+    flex-shrink: 0;
 }
 
 .bot-info h4 {
@@ -258,6 +330,11 @@ body {
     flex-direction: row-reverse;
 }
 
+/* Align items to bottom so copy button sits at bottom */
+.message {
+    align-items: flex-end;
+}
+
 .message-content {
     background-color: var(--bot-msg-bg);
     padding: 1rem;
@@ -266,16 +343,14 @@ body {
     line-height: 1.5;
     font-size: 0.95rem;
     position: relative;
-    /* For copy button positioning */
-    padding-bottom: 2rem;
-    /* Make space for copy button */
+    min-width: 0;
+    /* Fix for flex item overflow with pre tags */
 }
 
 .message.user .message-content {
     background-color: var(--user-msg-bg);
     border-radius: 1rem;
     border-top-right-radius: 0;
-    padding-bottom: 2rem;
 }
 
 /* Copy Buttons */
@@ -286,9 +361,17 @@ body {
     color: rgba(255, 255, 255, 0.4);
     cursor: pointer;
     font-size: 0.9rem;
-    transition: color 0.2s;
+    transition: opacity 0.2s, color 0.2s, background-color 0.2s;
     padding: 5px;
     border-radius: 4px;
+    opacity: 0;
+    /* Hide by default */
+}
+
+/* Show copy button when hovering the entire message row */
+.message:hover .msg-copy-btn,
+.message-content pre:hover .code-copy-btn {
+    opacity: 1;
 }
 
 .copy-btn:hover {
@@ -297,11 +380,13 @@ body {
 }
 
 .msg-copy-btn {
-    bottom: 5px;
-    right: 5px;
+    position: static;
+    color: var(--text-secondary);
+    padding: 5px;
 }
 
 .code-copy-btn {
+    position: absolute;
     top: 5px;
     right: 5px;
     font-size: 0.8rem;
@@ -452,11 +537,19 @@ body {
     margin-bottom: 0.5em;
 }
 
+.message-content ul,
+.message-content ol {
+    margin-left: 1.5rem;
+    margin-bottom: 0.5em;
+}
+
+.message-content>*:last-child {
+    margin-bottom: -0.5rem;
+}
+
 .message-content pre {
     background-color: rgba(0, 0, 0, 0.3);
     padding: 0.5rem;
-    padding-top: 2rem;
-    /* Space for copy button */
     border-radius: 0.5rem;
     overflow-x: auto;
     margin: 0.5rem 0;

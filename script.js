@@ -26,6 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentBotAvatarEl = document.getElementById('current-bot-avatar');
     const currentBotNameEl = document.getElementById('current-bot-name');
     const mobileBackBtn = document.getElementById('mobile-back-btn');
+    const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+
 
     // Buttons
     const createBotBtn = document.getElementById('create-bot-btn');
@@ -97,6 +99,15 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('modal-title').innerText = 'Create New Bot';
         openModal(botModal);
     });
+
+    // Sidebar Toggle
+    if (sidebarToggleBtn) {
+        sidebarToggleBtn.addEventListener('click', () => {
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.classList.toggle('collapsed');
+        });
+    }
+
 
     settingsBtn.addEventListener('click', () => {
         // Re-render list to ensure it's up to date
@@ -817,8 +828,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     contentHtml += `
                         <details class="tool-call">
                             <summary>Used Tool: <strong>${fc.name}</strong></summary>
-                            <pre>${JSON.stringify(fc.args, null, 2)}</pre>
-                            ${fr ? `<pre>${JSON.stringify(fr.response, null, 2)}</pre>` : ''}
+                            <pre><code class="language-json">${JSON.stringify(fc.args, null, 2)}</code></pre>
+                            ${fr ? `<pre><code class="language-json">${JSON.stringify(fr.response, null, 2)}</code></pre>` : ''}
                         </details>
                     `;
                 } else if (part.functionResponse) {
@@ -826,7 +837,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     contentHtml += `
                         <details class="tool-response">
                             <summary>Tool Output: <strong>${part.functionResponse.name}</strong></summary>
-                            <pre>${JSON.stringify(part.functionResponse.response, null, 2)}</pre>
+                            <pre><code class="language-json">${JSON.stringify(part.functionResponse.response, null, 2)}</code></pre>
                         </details>
                     `;
                 } else if (part.text) {
@@ -934,17 +945,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!contentEl) return;
 
         // 1. Message Copy Button
-        if (!contentEl.querySelector('.msg-copy-btn')) {
+        if (!msgElement.querySelector('.msg-copy-btn')) {
             const copyBtn = document.createElement('button');
             copyBtn.className = 'copy-btn msg-copy-btn';
             copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i>';
             copyBtn.title = "Copy Message";
             copyBtn.onclick = () => {
-                // Copy text only, avoiding button text if any (though buttons are usually excluded by innerText if done right, explicit exclusion is safer)
-                // Simplest: just innerText of content
+                // Copy text only
                 copyToClipboard(contentEl.innerText, copyBtn);
             };
-            contentEl.appendChild(copyBtn);
+            msgElement.appendChild(copyBtn);
         }
 
         // 2. Code Block Copy Buttons
