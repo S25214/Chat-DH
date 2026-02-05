@@ -137,6 +137,19 @@
                     <label>TTS Custom Params (JSON)</label>
                     <textarea id="tts-params" rows="4" placeholder='{ "voice_id": "..." }'></textarea>
                 </div>
+
+                <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.5rem 0;">
+
+                <div class="form-group">
+                    <label>MCP Servers (SSE URL)</label>
+                    <div class="input-group-row">
+                        <input type="text" id="mcp-url-input" placeholder="http://localhost:8000/sse">
+                        <button id="add-mcp-btn" class="secondary-btn"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                </div>
+                <div class="mcp-server-list" id="mcp-server-list">
+                    <!-- MCP Servers injected here -->
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="secondary-btn close-modal-btn">Close</button>
@@ -145,6 +158,9 @@
         </div>
     </div>
 
+
+    <script src="mcp-client.js"></script>
+    <script src="mcp-manager.js"></script>
     <script src="storage.js"></script>
     <script src="script.js"></script>
 </body>

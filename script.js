@@ -8,8 +8,11 @@ document.addEventListener('DOMContentLoaded', () => {
         dhStreamId: localStorage.getItem('dh_stream_id') || '',
         ttsUrl: localStorage.getItem('tts_url') || '',
         ttsToken: localStorage.getItem('tts_token') || '',
+        ttsUrl: localStorage.getItem('tts_url') || '',
+        ttsToken: localStorage.getItem('tts_token') || '',
         ttsParams: localStorage.getItem('tts_params') || '{}',
-        isDhConnected: false
+        isDhConnected: false,
+        mcpServers: []
     };
 
     // Elements
@@ -39,8 +42,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsModal = document.getElementById('settings-modal');
     const closeModalBtns = document.querySelectorAll('.close-modal-btn');
 
+    const mcpUrlInputEl = document.getElementById('mcp-url-input');
+    const addMcpBtn = document.getElementById('add-mcp-btn');
+    const mcpServerListEl = document.getElementById('mcp-server-list');
+
     // -- Initialization --
     loadBots();
+    loadMcpServers(); // Initialize MCP
 
     if (state.apiKey) document.getElementById('api-key-input').value = state.apiKey;
     if (state.modelName) document.getElementById('model-name-input').value = state.modelName;
@@ -76,7 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
         openModal(botModal);
     });
 
-    settingsBtn.addEventListener('click', () => openModal(settingsModal));
+    settingsBtn.addEventListener('click', () => {
+        // Re-render list to ensure it's up to date
+        renderMcpList();
+        openModal(settingsModal);
+    });
 
     closeModalBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -219,6 +231,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // -- MCP Settings UI Events --
+    addMcpBtn.addEventListener('click', () => {
+        const url = mcpUrlInputEl.value.trim();
+        if (url) {
+            if (!state.mcpServers.includes(url)) {
+                state.mcpServers.push(url);
+                window.storageManager.saveMcpServers(state.mcpServers);
+                window.mcpManager.updateServers(state.mcpServers);
+                renderMcpList();
+                mcpUrlInputEl.value = '';
+            } else {
+                alert('Server already added.');
+            }
+        }
+    });
+
+
     // -- Functions --
 
     function openModal(modal) {
@@ -350,7 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (err) {
             document.getElementById(loadingId).remove();
-            appendMessageUI({ role: 'bot', content: `**Network Error:** ${err.message}` });
+            appendMessageUI({ role: 'bot', content: `**Error:** ${err.message}` });
             console.error(err);
         }
         scrollToBottom();
@@ -359,31 +388,149 @@ document.addEventListener('DOMContentLoaded', () => {
     async function callGeminiAPI(apiKey, modelName, systemInstruction, history) {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-        const payload = {
-            contents: history,
-            systemInstruction: {
-                parts: [{ text: systemInstruction }]
-            }
-        };
+        // Prepare Tools
+        const mcpTools = window.mcpManager.getAllTools();
+        let tools = [];
+        if (mcpTools.length > 0) {
+            tools = [{ function_declarations: mcpTools }];
+        }
 
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+        let currentHistory = [...history];
+        let keepGoing = true;
+        let finalResponseText = '';
+
+        // Max turns to prevent infinite loops
+        let turnCount = 0;
+        const MAX_TURNS = 5;
+
+        while (keepGoing && turnCount < MAX_TURNS) {
+            turnCount++;
+
+            const payload = {
+                contents: currentHistory,
+                systemInstruction: {
+                    parts: [{ text: systemInstruction }]
+                }
+            };
+
+            if (tools.length > 0) {
+                payload.tools = tools;
+                // Auto-calling is default but can be explicit
+                // payload.tool_config = { function_calling_config: { mode: "AUTO" } };
+            }
+
+            console.log("Calling Gemini API", payload);
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error?.message || 'Gemini API Error');
+            }
+
+            if (!data.candidates || data.candidates.length === 0) {
+                return "No response from Gemini.";
+            }
+
+            const candidate = data.candidates[0];
+            const content = candidate.content;
+            const parts = content.parts || [];
+
+            // Add assistant response to history
+            currentHistory.push({
+                role: 'model',
+                parts: parts
+            });
+
+            // Check for function calls
+            const functionCalls = parts.filter(p => p.functionCall);
+
+            if (functionCalls.length > 0) {
+                console.log("Gemini requested function calls:", functionCalls);
+
+                // Show a small status update in chat? (Optional, skipping for now to keep it clean)
+
+                const functionResponses = [];
+
+                for (const call of functionCalls) {
+                    const fc = call.functionCall;
+                    try {
+                        console.log(`Executing tool: ${fc.name}`, fc.args);
+                        const result = await window.mcpManager.executeTool(fc.name, fc.args);
+
+                        functionResponses.push({
+                            functionResponse: {
+                                name: fc.name,
+                                response: { name: fc.name, content: result }
+                            }
+                        });
+                    } catch (e) {
+                        console.error(`Tool execution failed for ${fc.name}`, e);
+                        functionResponses.push({
+                            functionResponse: {
+                                name: fc.name,
+                                response: { name: fc.name, content: { error: e.message } }
+                            }
+                        });
+                    }
+                }
+
+                // Add function responses to history
+                currentHistory.push({
+                    role: 'function',
+                    parts: functionResponses
+                });
+
+                // Loop continues to get the model's interpretation of results
+                keepGoing = true;
+
+            } else {
+                // No function calls, just text
+                // Combine text parts
+                const textParts = parts.filter(p => p.text).map(p => p.text).join('\n');
+                finalResponseText = textParts;
+                keepGoing = false;
+            }
+        }
+
+        return finalResponseText || "Finished tool execution.";
+    }
+
+    function loadMcpServers() {
+        state.mcpServers = window.storageManager.getMcpServers();
+        renderMcpList();
+        // Trigger connection
+        window.mcpManager.updateServers(state.mcpServers);
+    }
+
+    function renderMcpList() {
+        if (!mcpServerListEl) return;
+        mcpServerListEl.innerHTML = '';
+        state.mcpServers.forEach((url, index) => {
+            const el = document.createElement('div');
+            el.className = 'mcp-server-item';
+            el.innerHTML = `
+                <span title="${url}">${url}</span>
+                <button type="button" class="remove-mcp-btn" data-index="${index}"><i class="fa-solid fa-trash"></i></button>
+            `;
+            mcpServerListEl.appendChild(el);
         });
 
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error?.message || 'Gemini API Error');
-        }
-
-        // Extract text
-        if (data.candidates && data.candidates.length > 0) {
-            return data.candidates[0].content.parts[0].text;
-        } else {
-            return "No response from Gemini.";
-        }
+        // Bind remove buttons
+        document.querySelectorAll('.remove-mcp-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(e.currentTarget.dataset.index);
+                state.mcpServers.splice(idx, 1);
+                window.storageManager.saveMcpServers(state.mcpServers);
+                window.mcpManager.updateServers(state.mcpServers);
+                renderMcpList();
+            });
+        });
     }
 
     function appendMessageUI(msg) {

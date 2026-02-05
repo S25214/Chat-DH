@@ -416,7 +416,52 @@ body {
     margin: 0.5rem 0;
 }
 
-.message-content code {
-    font-family: 'Consolas', monospace;
-    font-size: 0.9em;
+
+/* MCP Server List */
+.mcp-server-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 150px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+    padding-right: 0.5rem;
+}
+
+.mcp-server-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--input-bg);
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-color);
+}
+
+.mcp-server-item span {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 0.5rem;
+}
+
+.mcp-server-item button {
+    background: none;
+    border: none;
+    color: var(--danger-color);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+    transition: background-color 0.2s;
+}
+
+.mcp-server-item button:hover {
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+.input-group-row {
+    display: flex;
+    gap: 0.5rem;
 }

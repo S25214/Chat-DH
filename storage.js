@@ -16,7 +16,9 @@ class StorageManager {
     constructor() {
         this.BOTS_KEY = 'chatbot_bots';
         this.CHATS_KEY = 'chatbot_chats';
+        this.CHATS_KEY = 'chatbot_chats';
         this.SETTINGS_KEY = 'chatbot_settings';
+        this.MCP_SERVERS_KEY = 'chatbot_mcp_servers';
 
         this.init();
     }
@@ -106,6 +108,17 @@ class StorageManager {
             localStorage.setItem(this.CHATS_KEY, JSON.stringify(chats));
         }
         return { success: true };
+    }
+
+
+    // --- MCP Servers ---
+
+    getMcpServers() {
+        return JSON.parse(localStorage.getItem(this.MCP_SERVERS_KEY) || '[]');
+    }
+
+    saveMcpServers(servers) {
+        localStorage.setItem(this.MCP_SERVERS_KEY, JSON.stringify(servers));
     }
 
     // --- Settings (Helpers for cleaner access, though direct localStorage was used in script.js) ---
