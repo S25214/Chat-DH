@@ -114,7 +114,14 @@ class StorageManager {
     // --- MCP Servers ---
 
     getMcpServers() {
-        return JSON.parse(localStorage.getItem(this.MCP_SERVERS_KEY) || '[]');
+        const data = JSON.parse(localStorage.getItem(this.MCP_SERVERS_KEY) || '[]');
+        // Migration: Convert strings to objects if necessary
+        return data.map(item => {
+            if (typeof item === 'string') {
+                return { url: item, useProxy: false };
+            }
+            return item;
+        });
     }
 
     saveMcpServers(servers) {

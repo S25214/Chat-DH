@@ -143,8 +143,14 @@
                 <div class="form-group">
                     <label>MCP Servers (SSE URL)</label>
                     <div class="input-group-row">
-                        <input type="text" id="mcp-url-input" placeholder="http://localhost:8000/sse">
+                        <input type="text" id="mcp-url-input" placeholder="http://localhost:8000/sse" style="flex:1;">
                         <button id="add-mcp-btn" class="secondary-btn"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                    <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="mcp-proxy-check" style="width: auto;">
+                        <label for="mcp-proxy-check"
+                            style="margin:0; font-size: 0.85rem; color: var(--text-secondary);">Use CORS Proxy (try if
+                            connection fails)</label>
                     </div>
                 </div>
                 <div class="mcp-server-list" id="mcp-server-list">
@@ -159,7 +165,9 @@
     </div>
 
 
+    <script src="mcp-sdk.js"></script>
     <script src="mcp-client.js"></script>
+    <script src="local-tools.js"></script>
     <script src="mcp-manager.js"></script>
     <script src="storage.js"></script>
     <script src="script.js"></script>

@@ -5,31 +5,44 @@
 class McpManager {
     constructor() {
         this.clients = new Map(); // url -> McpClient
+
+        // Initialize Local Tools
+        if (window.LocalToolsClient) {
+            const localClient = new window.LocalToolsClient();
+            this.clients.set('local://browser-tools', localClient);
+            localClient.connect().catch(e => console.error("Failed to connect local tools", e));
+        }
     }
 
     /**
      * Reconciles connected clients with the provided list of URLs.
      * Connects new ones, disconnects removed ones.
      */
-    async updateServers(serverUrls) {
+    async updateServers(serverConfigs) {
+        // Map configs by URL to check for existence
+        const newConfigs = new Map(serverConfigs.map(c => [c.url, c]));
         const currentUrls = new Set(this.clients.keys());
-        const newUrls = new Set(serverUrls);
 
-        // Disconnect removed
+        // Disconnect removed or changed
         for (const url of currentUrls) {
-            if (!newUrls.has(url)) {
-                console.log(`[MCP Manager] Removing server: ${url}`);
-                const client = this.clients.get(url);
+            // Skip local tools
+            if (url === 'local://browser-tools') continue;
+
+            const client = this.clients.get(url);
+            const newConfig = newConfigs.get(url);
+
+            if (!newConfig || client.useProxy !== newConfig.useProxy) {
+                console.log(`[MCP Manager] Removing server (Config changed or removed): ${url}`);
                 client.disconnect();
                 this.clients.delete(url);
             }
         }
 
-        // Connect new
-        for (const url of newUrls) {
+        // Connect new or update
+        for (const [url, config] of newConfigs.entries()) {
             if (!currentUrls.has(url)) {
-                console.log(`[MCP Manager] Adding server: ${url}`);
-                const client = new McpClient(url);
+                console.log(`[MCP Manager] Adding server: ${url} (Proxy: ${config.useProxy})`);
+                const client = new McpClient(url, config.useProxy);
                 this.clients.set(url, client);
                 // Fire and forget connection, individual errors shouldn't block others
                 client.connect().catch(e => console.error(`[MCP Manager] Failed to connect to ${url}`, e));

@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeModalBtns = document.querySelectorAll('.close-modal-btn');
 
     const mcpUrlInputEl = document.getElementById('mcp-url-input');
+    const mcpProxyCheckEl = document.getElementById('mcp-proxy-check');
     const addMcpBtn = document.getElementById('add-mcp-btn');
     const mcpServerListEl = document.getElementById('mcp-server-list');
 
@@ -234,13 +235,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // -- MCP Settings UI Events --
     addMcpBtn.addEventListener('click', () => {
         const url = mcpUrlInputEl.value.trim();
+        const useProxy = mcpProxyCheckEl.checked;
+
         if (url) {
-            if (!state.mcpServers.includes(url)) {
-                state.mcpServers.push(url);
+            // Check for duplicates (by URL)
+            if (!state.mcpServers.some(s => s.url === url)) {
+                state.mcpServers.push({ url, useProxy });
                 window.storageManager.saveMcpServers(state.mcpServers);
                 window.mcpManager.updateServers(state.mcpServers);
                 renderMcpList();
                 mcpUrlInputEl.value = '';
+                mcpProxyCheckEl.checked = false;
             } else {
                 alert('Server already added.');
             }
@@ -451,22 +456,48 @@ document.addEventListener('DOMContentLoaded', () => {
             const functionCalls = parts.filter(p => p.functionCall);
 
             if (functionCalls.length > 0) {
-                console.log("Gemini requested function calls:", functionCalls);
-
-                // Show a small status update in chat? (Optional, skipping for now to keep it clean)
+                console.group(`[LLM] 🤖 Tool Execution Group`);
 
                 const functionResponses = [];
 
                 for (const call of functionCalls) {
                     const fc = call.functionCall;
                     try {
-                        console.log(`Executing tool: ${fc.name}`, fc.args);
+                        console.log(`%c🛠️ Calling Tool: ${fc.name}`, 'color: #2979FF; font-weight: bold;', fc.args);
                         const result = await window.mcpManager.executeTool(fc.name, fc.args);
+
+                        console.log(`%c✅ Result for ${fc.name}:`, 'color: #00C853;', result);
+
+                        // Unpack MCP result for Gemini
+                        // MCP tools often return { content: [ { type: 'text', text: 'JSON_STRING' } ] }
+                        // We want to pass the parsed JSON to Gemini if possible.
+                        let responseContent = result;
+
+                        if (result && result.content && Array.isArray(result.content)) {
+                            // Filter for text content
+                            const textContent = result.content
+                                .filter(item => item.type === 'text')
+                                .map(item => item.text)
+                                .join('\n');
+
+                            if (textContent) {
+                                try {
+                                    // Try to parse as JSON if it looks like it
+                                    if (textContent.trim().startsWith('{') || textContent.trim().startsWith('[')) {
+                                        responseContent = JSON.parse(textContent);
+                                    } else {
+                                        responseContent = { result: textContent };
+                                    }
+                                } catch (e) {
+                                    responseContent = { result: textContent };
+                                }
+                            }
+                        }
 
                         functionResponses.push({
                             functionResponse: {
                                 name: fc.name,
-                                response: { name: fc.name, content: result }
+                                response: { name: fc.name, content: responseContent }
                             }
                         });
                     } catch (e) {
@@ -479,6 +510,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     }
                 }
+
+                console.groupEnd(); // End Tool Usage Group
 
                 // Add function responses to history
                 currentHistory.push({
@@ -511,11 +544,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderMcpList() {
         if (!mcpServerListEl) return;
         mcpServerListEl.innerHTML = '';
-        state.mcpServers.forEach((url, index) => {
+        state.mcpServers.forEach((server, index) => {
             const el = document.createElement('div');
             el.className = 'mcp-server-item';
             el.innerHTML = `
-                <span title="${url}">${url}</span>
+                <div style="overflow:hidden; display:flex; flex-direction:column;">
+                    <span title="${server.url}">${server.url}</span>
+                    ${server.useProxy ? '<small style="color:var(--primary-color); font-size:0.75rem;">via Proxy</small>' : ''}
+                </div>
                 <button type="button" class="remove-mcp-btn" data-index="${index}"><i class="fa-solid fa-trash"></i></button>
             `;
             mcpServerListEl.appendChild(el);
