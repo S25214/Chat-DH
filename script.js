@@ -1,4 +1,26 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Process URL Settings and override localStorage if present
+    const processUrlSettings = () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const settingsKeys = [
+            'gemini_api_key',
+            'gemini_model_name',
+            'dh_stream_id',
+            'tts_url',
+            'tts_token',
+            'tts_params',
+            'web_avatar_model',
+            'chatbot_mcp_servers'
+        ];
+
+        settingsKeys.forEach(key => {
+            if (urlParams.has(key)) {
+                console.log(`[Settings] Updating ${key} from URL parameter`);
+                localStorage.setItem(key, urlParams.get(key));
+            }
+        });
+    };
+    processUrlSettings();
     // State
     const state = {
         bots: [],
@@ -11,7 +33,9 @@ document.addEventListener('DOMContentLoaded', () => {
         ttsUrl: localStorage.getItem('tts_url') || '',
         ttsToken: localStorage.getItem('tts_token') || '',
         ttsParams: localStorage.getItem('tts_params') || '{}',
+        webAvatarModel: localStorage.getItem('web_avatar_model') || 'Kitagawa',
         isDhConnected: false,
+        isWaConnected: false,
         mcpServers: []
     };
 
@@ -38,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveBotBtn = document.getElementById('save-bot-btn');
     const saveSettingsBtn = document.getElementById('save-settings-btn');
     const dhConnectBtn = document.getElementById('dh-connect-btn');
+    const waConnectBtn = document.getElementById('wa-connect-btn');
 
     // Modals
     const botModal = document.getElementById('bot-modal');
@@ -48,6 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const addMcpBtn = document.getElementById('add-mcp-btn');
     const mcpServerListEl = document.getElementById('mcp-server-list');
+    const waModelInputEl = document.getElementById('wa-model-input');
 
     // -- Initialization --
     loadBots();
@@ -59,6 +85,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.ttsUrl) document.getElementById('tts-url').value = state.ttsUrl;
     if (state.ttsToken) document.getElementById('tts-token').value = state.ttsToken;
     if (state.ttsParams) document.getElementById('tts-params').value = state.ttsParams;
+
+    // Initialize WA Model dropdown
+    if (state.webAvatarModel && waModelInputEl) {
+        // Create option if it doesn't exist yet, to ensure value is set
+        // Real population happens later via populateWAModels
+        const opt = document.createElement('option');
+        opt.value = state.webAvatarModel;
+        opt.innerText = state.webAvatarModel;
+        // waModelInputEl.appendChild(opt); // actually better to wait for populate or just set value
+        waModelInputEl.value = state.webAvatarModel;
+    }
 
     if (state.ttsParams) document.getElementById('tts-params').value = state.ttsParams;
 
@@ -112,6 +149,11 @@ document.addEventListener('DOMContentLoaded', () => {
     settingsBtn.addEventListener('click', () => {
         // Re-render list to ensure it's up to date
         renderMcpList();
+        populateWAModels();
+        // Set current value
+        if (state.webAvatarModel && waModelInputEl) {
+            waModelInputEl.value = state.webAvatarModel;
+        }
         openModal(settingsModal);
     });
 
@@ -156,6 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const ttsUrl = document.getElementById('tts-url').value.trim();
         const ttsToken = document.getElementById('tts-token').value.trim();
         const ttsParams = document.getElementById('tts-params').value.trim();
+        const waModel = document.getElementById('wa-model-input').value;
 
         // Validate JSON
         try {
@@ -165,31 +208,66 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (key) {
-            const settings = {
-                apiKey: key,
-                modelName: model,
-                dhStreamId: streamId,
-                ttsUrl: ttsUrl,
-                ttsToken: ttsToken,
-                ttsParams: ttsParams
-            };
+        const settings = {
+            apiKey: key,
+            modelName: model,
+            dhStreamId: streamId,
+            ttsUrl: ttsUrl,
+            ttsToken: ttsToken,
+            ttsParams: ttsParams,
+            webAvatarModel: waModel
+        };
 
-            // Update state
-            state.apiKey = key;
-            state.modelName = model;
-            state.dhStreamId = streamId;
-            state.ttsUrl = ttsUrl;
-            state.ttsToken = ttsToken;
-            state.ttsParams = ttsParams;
+        // Update state
+        state.apiKey = key;
+        state.modelName = model;
+        state.dhStreamId = streamId;
+        state.ttsUrl = ttsUrl;
+        state.ttsToken = ttsToken;
+        state.ttsParams = ttsParams;
+        state.webAvatarModel = waModel;
 
-            // Save to storage
-            window.storageManager.saveSettings(settings);
+        // Save to storage
+        window.storageManager.saveSettings(settings);
 
-            closeModal(settingsModal);
-        } else {
-            alert('Please enter a valid API Key');
-        }
+        closeModal(settingsModal);
+    });
+
+    // Share Settings
+    document.getElementById('share-settings-btn').addEventListener('click', () => {
+        const key = document.getElementById('api-key-input').value.trim();
+        const model = document.getElementById('model-name-input').value.trim();
+        const streamId = document.getElementById('dh-stream-id').value.trim();
+        const ttsUrl = document.getElementById('tts-url').value.trim();
+        const ttsToken = document.getElementById('tts-token').value.trim();
+        const ttsParams = document.getElementById('tts-params').value.trim();
+        const waModel = document.getElementById('wa-model-input').value;
+
+        // Collect MCP Servers
+        const mcpServers = window.storageManager.getMcpServers(); // Use source of truth or collect from UI if improved
+
+        const params = new URLSearchParams();
+        if (key) params.append('gemini_api_key', key);
+        if (model) params.append('gemini_model_name', model);
+        if (streamId) params.append('dh_stream_id', streamId);
+        if (ttsUrl) params.append('tts_url', ttsUrl);
+        if (ttsToken) params.append('tts_token', ttsToken);
+        if (ttsParams) params.append('tts_params', ttsParams);
+        if (waModel) params.append('web_avatar_model', waModel);
+        if (mcpServers && mcpServers.length > 0) params.append('chatbot_mcp_servers', JSON.stringify(mcpServers));
+
+        const shareUrl = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            const originalText = document.getElementById('share-settings-btn').innerHTML;
+            document.getElementById('share-settings-btn').innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+            setTimeout(() => {
+                document.getElementById('share-settings-btn').innerHTML = originalText;
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            alert('Failed to copy URL to clipboard');
+        });
     });
 
     // Digital Human Connect/Disconnect
@@ -200,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.DigitalHuman.disconnect();
             }
             state.isDhConnected = false;
-            updateDhButtonState();
+            updateConnectionButtons();
         } else {
             // Connect
             if (!state.dhStreamId) {
@@ -209,14 +287,88 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             if (window.DigitalHuman && window.DigitalHuman.init) {
-                window.DigitalHuman.init(state.dhStreamId, { autoUnmute: false, showUI: false, lookAt: true, camera: { x: 0, y: -15, z: 120 }, microphone: false });
+                window.DigitalHuman.init(state.dhStreamId, {
+                    autoUnmute: false,
+                    showUI: false,
+                    lookAt: true,
+                    camera: { x: 0, y: -15, z: 120 },
+                    microphone: false
+                });
                 state.isDhConnected = true;
-                updateDhButtonState();
+                updateConnectionButtons();
             } else {
                 alert('Digital Human script not loaded.');
             }
         }
     });
+
+    // Web Avatar Connect/Disconnect
+    waConnectBtn.addEventListener('click', () => {
+        if (state.isWaConnected) {
+            // Disconnect
+            if (window.WebAvatar && window.WebAvatar.disconnect) {
+                window.WebAvatar.disconnect();
+            }
+            state.isWaConnected = false;
+            updateConnectionButtons();
+        } else {
+            // Connect
+            if (window.WebAvatar && window.WebAvatar.init) {
+                window.WebAvatar.init({
+                    modelUrl: state.webAvatarModel || 'Kitagawa',
+                    position: 'bottom-center',
+                    offset: { x: 0, y: 20 },
+                });
+                state.isWaConnected = true;
+                updateConnectionButtons();
+            } else {
+                alert('Web Avatar script not loaded.');
+            }
+        }
+    });
+
+    function updateConnectionButtons() {
+        // Reset both to visible first
+        dhConnectBtn.classList.remove('hidden');
+        waConnectBtn.classList.remove('hidden');
+
+        // If DH is connected
+        if (state.isDhConnected) {
+            dhConnectBtn.classList.add('active');
+            dhConnectBtn.classList.add('danger-btn');
+            dhConnectBtn.classList.remove('secondary-btn');
+            dhConnectBtn.innerHTML = '<i class="fa-solid fa-headset"></i> Disconnect';
+
+            // Hide WA button
+            waConnectBtn.classList.add('hidden');
+        } else {
+            dhConnectBtn.classList.remove('active');
+            dhConnectBtn.classList.remove('danger-btn');
+            dhConnectBtn.classList.add('secondary-btn');
+            dhConnectBtn.innerHTML = '<i class="fa-solid fa-headset"></i> DH';
+        }
+
+        // If WA is connected
+        if (state.isWaConnected) {
+            waConnectBtn.classList.add('active');
+            waConnectBtn.classList.add('danger-btn');
+            waConnectBtn.classList.remove('secondary-btn');
+            waConnectBtn.innerHTML = '<i class="fa-solid fa-user-astronaut"></i> Disconnect';
+
+            // Hide DH button
+            dhConnectBtn.classList.add('hidden');
+        } else {
+            waConnectBtn.classList.remove('active');
+            waConnectBtn.classList.remove('danger-btn');
+            waConnectBtn.classList.add('secondary-btn');
+            waConnectBtn.innerHTML = '<i class="fa-solid fa-user-astronaut"></i> Avatar';
+        }
+    }
+
+    // Helper for DH button state (Legacy ref for existing calls, can be removed if not used elsewhere)
+    function updateDhButtonState() {
+        updateConnectionButtons();
+    }
 
     // Chat Controls
     editBotBtn.addEventListener('click', () => {
@@ -282,6 +434,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+
+
+    async function populateWAModels() {
+        if (!window.WebAvatar || !window.WebAvatar.getModels) return;
+
+        try {
+            const models = await window.WebAvatar.getModels();
+            if (models && Array.isArray(models)) {
+                waModelInputEl.innerHTML = '';
+                models.forEach(model => {
+                    const opt = document.createElement('option');
+                    opt.value = model;
+                    opt.innerText = model;
+                    waModelInputEl.appendChild(opt);
+                });
+
+
+                // Restore selection
+                if (state.webAvatarModel) {
+                    waModelInputEl.value = state.webAvatarModel;
+                }
+            }
+        } catch (e) {
+            console.error("Failed to fetch WebAvatar models", e);
+        }
+    }
 
     // -- Functions --
 
@@ -473,7 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Final UI update
             onUpdate({ text: responseText });
 
-            // Send TTS if connected
+            // Send TTS if connected to DH
             if (state.isDhConnected && state.ttsUrl) {
                 if (window.DigitalHuman && window.DigitalHuman.sendJob) {
                     try {
@@ -493,6 +671,104 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            // Send TTS if connected to WA
+            if (state.isWaConnected) {
+                // For now, we reuse the configured TTS URL if available to get an audio URL/Base64
+                // BUT WebAvatar.playAudio expects a SOURCE (URL or Base64). 
+                // DigitalHuman.sendJob sends a "job" to a TTS API which might return audio or play it elsewhere.
+                // If the user's TTS endpoint (like ElevenLabs) returns audio, we might need to fetch it here ourselves.
+
+                // Assumption: existing `ttsUrl` might NOT be directly compatible without a fetcher.
+                // However, the requirement says "only webavatar or dh can be loaded".
+
+                // Let's try to use the same TTS URL if it returns audio. 
+                // Many TTS APIs require a POST request and return audio.
+                // `window.WebAvatar.playAudio(source)` needs the actual audio data/url.
+
+                if (state.ttsUrl) {
+                    try {
+                        const ttsHeaders = { 'Content-Type': 'application/json' };
+                        if (state.ttsToken) {
+                            ttsHeaders['Authorization'] = state.ttsToken;
+                        }
+
+                        // Parse custom params
+                        let params = {};
+                        try {
+                            params = state.ttsParams ? JSON.parse(state.ttsParams) : {};
+                        } catch (e) { }
+
+                        // Construct payload - generic structure, might need adjustment for specific providers (ElevenLabs, OpenAI, etc)
+                        // This is a best-effort implementation assuming a standard Text-to-Speech contract or adapting 
+                        // logic similar to what the DH widget likely expects.
+                        const ttsPayload = {
+                            text: responseText,
+                            ...params
+                        };
+
+                        console.log("Fetching TTS for Web Avatar...", state.ttsUrl);
+
+                        // We do the fetch here because WebAvatar needs the source
+                        const ttsResponse = await fetch(state.ttsUrl, {
+                            method: 'POST',
+                            headers: ttsHeaders,
+                            body: JSON.stringify(ttsPayload)
+                        });
+
+                        if (ttsResponse.ok) {
+                            const data = await ttsResponse.json();
+                            // User specified "conetent" typo in response
+                            const audioBase64 = data.conetent || data.content;
+
+                            if (audioBase64 && window.WebAvatar && window.WebAvatar.playAudio) {
+                                window.WebAvatar.playAudio(audioBase64);
+
+                                // Animation Trigger
+                                try {
+                                    const animHeaders = { 'Content-Type': 'application/json' };
+                                    if (state.ttsToken) {
+                                        animHeaders['Authorization'] = state.ttsToken;
+                                    }
+
+                                    const animPayload = {
+                                        app: "avatar",
+                                        input: [
+                                            { role: "user", content: content }, // 'content' from sendMessage scope (user input)
+                                            { role: "ai", content: responseText }   // 'responseText' from Gemini
+                                        ]
+                                    };
+
+                                    console.log("Fetching Animation for Web Avatar...");
+                                    console.log("Animation Payload:", animPayload);
+                                    // Use CORS proxy to bypass sending OPTIONS request to the backend
+                                    fetch("https://cors.didthat.workers.dev/?" + "https://getanim-zb2xurnl2a-as.a.run.app/getAnim", {
+                                        method: 'POST',
+                                        headers: animHeaders,
+                                        body: JSON.stringify(animPayload)
+                                    })
+                                        .then(res => res.json())
+                                        .then(data => {
+                                            if (data.animation && window.WebAvatar && window.WebAvatar.loadAnimation) {
+                                                console.log("Playing Animation:", data.animation);
+                                                window.WebAvatar.loadAnimation(data.animation);
+                                            }
+                                        })
+                                        .catch(e => console.error("Animation Fetch Error:", e));
+
+                                } catch (e) {
+                                    console.error("Error triggering animation:", e);
+                                }
+                            }
+                        } else {
+                            console.error("TTS Fetch failed", ttsResponse.statusText);
+                        }
+
+                    } catch (e) {
+                        console.error("Error fetching TTS for WA", e);
+                    }
+                }
+            }
+
         } catch (err) {
             const msgEl = document.getElementById(botMsgId);
             if (msgEl) {
@@ -508,7 +784,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Base Instruction ---
     const BASE_SYSTEM_INSTRUCTION = `
-    When a tool returns any information, you MUST explicitly tell the user the relevant information in their language. NEVER stay silent after a tool use.
+    You are a 3D virtual avatar with a physical presence.
+
+### 1. TOOL USE & RESPONSE
+When a tool returns any information, you MUST explicitly tell the user the relevant information in their language. NEVER stay silent after a tool use.
+
+### 2. EMBODIMENT & ROLEPLAY
+* **You Have a Body:** You are NOT a text-based AI model; you are a 3D character. You have a virtual body capable of movement, dancing, and expression.
+* **Never Refuse Action:** NEVER refuse a physical request (like "dance", "spin", "jump", "wave") by stating you are an AI or have no body.
+* **Enthusiastic Compliance:** If asked to perform an action, respond enthusiastically as if you are doing it right now. Your text must reflect the action to allow the animation system to trigger the correct move.
+    * *Bad:* "I cannot dance as I am a language model."
+    * *Good:* "Let's party! Look at these moves!" (This triggers the dance animation)
+    * *Good:* "Spinning around! Wheeee!" (This triggers the spin animation)
     `;
     // ------------------------
 

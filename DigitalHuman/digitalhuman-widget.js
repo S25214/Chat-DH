@@ -19,7 +19,8 @@
         showUI: true,
         lookAt: false,
         camera: null,
-        microphone: true
+        microphone: true,
+        provider: null
     };
 
     // Face Detection State
@@ -145,12 +146,22 @@
     }
 
     function processQueue() {
-        if (!isLoaded || messageQueue.length === 0 || !iframe || !iframe.contentWindow) return;
+        if (!isLoaded || messageQueue.length === 0) return;
 
-        const data = messageQueue.shift();
-        data._padding = "||END||";
-        iframe.contentWindow.postMessage(data, '*');
-        console.log("Processed message from queue:", data);
+        // Vagon Logic
+        if (config.provider === 'vagon') {
+            if (!window.Vagon || !window.Vagon.isConnected) return;
+            const data = messageQueue.shift();
+            data.padding = "||END||";
+            window.Vagon.emitUIInteraction(JSON.stringify(data));
+            console.log("Processed message from queue:", data);
+        } else if (config.provider === 'streampixel') {
+            if (!iframe || !iframe.contentWindow) return;
+            const data = messageQueue.shift();
+            data._padding = "||END||";
+            iframe.contentWindow.postMessage(data, '*');
+            console.log("Processed message from queue:", data);
+        }
     }
 
     // --- DETERMINE BASE URL ---
@@ -167,12 +178,26 @@
     // --- MAIN INIT FUNCTION ---
     function init(streamUrl, optionsOrContainer = null) {
         if (container) {
+            alert("DigitalHuman widget is already initialized.");
             console.warn("DigitalHuman widget is already initialized.");
             return;
         }
 
-        if (!streamUrl) {
-            console.error("DigitalHuman init: streamUrl is required.");
+        if (streamUrl) {
+            if (streamUrl.includes('vagon.io')) {
+                config.provider = 'vagon';
+                console.log("Auto-detected Provider: Vagon");
+            } else if (streamUrl.includes('streampixel.io')) {
+                config.provider = 'streampixel';
+                console.log("Auto-detected Provider: StreamPixel");
+            } else {
+                alert("Unknown Streaming Provider. Please check your URL.");
+                console.error("Unknown Streaming Provider. URL must contain 'vagon.io' or 'streampixel.io'");
+                return;
+            }
+        } else {
+            alert("No Stream URL provided.");
+            console.error("No Stream URL provided.");
             return;
         }
 
@@ -183,6 +208,7 @@
         config.lookAt = false;
         config.camera = null;
         config.microphone = true;
+
 
         if (optionsOrContainer) {
             if (optionsOrContainer instanceof HTMLElement) {
@@ -409,11 +435,76 @@
             }
         }
 
+
+
         // 3. Create Iframe
         iframe = document.createElement('iframe');
 
-        // Define the HTML content to be inlined
-        const iframeContent = `
+        if (config.provider === 'vagon') {
+            console.log("Initializing Vagon Widget...");
+
+            // 3a. LOAD Vagon SDK
+            // We assume vagonsdk.js is in the same folder as this script
+            loadScript(baseUrl + "vagonsdk.js").then(() => {
+                console.log("Vagon SDK Loaded.");
+                // 3b. Setup Iframe for Vagon
+                let allowFeatures = "autoplay *; camera *; display-capture *; clipboard-read *; clipboard-write *; encrypted-media *;";
+                if (config.microphone) {
+                    allowFeatures += "; microphone *";
+                }
+                iframe.id = "vagonFrame"; // REQUIRED by Vagon SDK
+                iframe.src = streamUrl;
+                iframe.allow = allowFeatures;
+                iframe.style.cssText = "width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0;";
+
+                if (window.Vagon) {
+                    console.log("Vagon SDK is ready.");
+                    window.Vagon.onConnected(() => {
+                        console.log("User Connected");
+                        isLoaded = true;
+                        if (overlay) {
+                            overlay.style.cursor = 'pointer';
+                            // Show unmute UI? Vagon usually handles its own or we can force it.
+                            overlay.style.display = 'flex';
+                            overlay.style.justifyContent = 'center';
+                            overlay.style.alignItems = 'center';
+                            overlay.innerHTML = `
+                                <div style="background: rgba(0, 0, 0, 0.6); padding: 12px 20px; border-radius: 8px; text-align: center; color: white; display: flex; flex-direction: column; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); backdrop-filter: blur(4px);">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="stroke: #ff5555;">
+                                        <path d="M11 5L6 9H2V15H6L11 19V5Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M23 9L17 15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M17 9L23 15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    <span style="font-family: sans-serif; font-size: 14px; font-weight: 500; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">Click to Start</span>
+                                </div>
+                            `;
+                        }
+                    });
+                    window.Vagon.onDisconnected(() => {
+                        console.log("User Disconnected");
+                        isLoaded = false;
+                    });
+
+                    window.Vagon.onApplicationMessage((evt) => {
+                        console.log("Received Message from Unreal:", evt.message);
+                        // Optional: You can choose to dispatch this to the parent window or handle it here
+                    });
+
+                    window.Vagon.onResponse((data) => {
+                        console.log("Received Response from Unreal (Pixel Streaming):", data);
+                    });
+
+                    container.appendChild(iframe);
+                }
+            }).catch(e => {
+                console.error("Failed to load Vagon SDK", e);
+            });
+
+        } else {
+            // StreamPixel (Default) Logic
+
+            // Define the HTML content to be inlined
+            const iframeContent = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -490,42 +581,43 @@
     </script>
 </body>
 </html>
-        `;
+            `;
 
-        // Use srcdoc to inject the HTML content
-        iframe.srcdoc = iframeContent;
-        console.log("Loading inlined widget client.");
+            // Use srcdoc to inject the HTML content
+            iframe.srcdoc = iframeContent;
+            console.log("Loading inlined widget client.");
 
-        iframe.onload = () => {
-            // Extract Stream ID from the original URL if necessary, or assume input is ID
-            let sId = streamUrl;
-            try {
-                const urlObj = new URL(streamUrl);
-                // extracting the last part of the path as ID
-                const parts = urlObj.pathname.split('/').filter(p => p);
-                if (parts.length > 0) {
-                    sId = parts[parts.length - 1];
+            iframe.onload = () => {
+                // Extract Stream ID from the original URL if necessary, or assume input is ID
+                let sId = streamUrl;
+                try {
+                    const urlObj = new URL(streamUrl);
+                    // extracting the last part of the path as ID
+                    const parts = urlObj.pathname.split('/').filter(p => p);
+                    if (parts.length > 0) {
+                        sId = parts[parts.length - 1];
+                    }
+                } catch (e) {
+                    // Not a URL, stick with original value
                 }
-            } catch (e) {
-                // Not a URL, stick with original value
+
+                console.log("Initializing WebSDK with Stream ID:", sId);
+                iframe.contentWindow.postMessage({
+                    command: 'init_sdk',
+                    streamId: sId,
+                    config: config
+                }, '*');
+            };
+
+            let allowFeatures = "autoplay *; camera *; display-capture *";
+            if (config.microphone) {
+                allowFeatures += "; microphone *";
             }
-
-            console.log("Initializing WebSDK with Stream ID:", sId);
-            iframe.contentWindow.postMessage({
-                command: 'init_sdk',
-                streamId: sId,
-                config: config
-            }, '*');
-        };
-
-        let allowFeatures = "autoplay *; camera *; display-capture *";
-        if (config.microphone) {
-            allowFeatures += "; microphone *";
+            iframe.allow = allowFeatures;
+            iframe.sandbox = "allow-scripts allow-same-origin allow-forms";
+            iframe.style.cssText = "width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0;";
+            container.appendChild(iframe);
         }
-        iframe.allow = allowFeatures;
-        iframe.sandbox = "allow-scripts allow-same-origin allow-forms";
-        iframe.style.cssText = "width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0;";
-        container.appendChild(iframe);
 
         // 4. Create Click Overlay (For Unmuting)
         overlay = document.createElement('div');
@@ -538,11 +630,25 @@
 
         overlay.addEventListener('click', function () {
             if (!isLoaded) return;
-            messageQueue.push({ command: 'unMuteAudio' });
-            console.log("Unmuted Audio");
+
+            if (config.provider === 'vagon') {
+                if (window.Vagon) {
+                    // Try to unmute or focus
+                    window.Vagon.focusIframe();
+                    // Some basic initial interaction
+                    // Vagon typically starts with audio enabled if policy allows, otherwise interaction starts it.
+                    // We can try setting volume.
+                    window.Vagon.setVideoVolume(1);
+                    console.log("Clicked Overlay (Focus/Unmute)");
+                }
+            } else {
+                messageQueue.push({ command: 'unMuteAudio' });
+                console.log("Unmuted Audio");
+            }
+
             overlay.remove();
             overlay = null; // Clear reference
-            iframe.focus();
+            if (iframe) iframe.focus();
         });
 
         // Store disconnection logic type
@@ -611,6 +717,12 @@
 
     function disconnect() {
         if (container) {
+            if (config.provider === 'vagon' && window.Vagon) {
+                try {
+                    // Clean up Vagon
+                    window.Vagon.shutdown();
+                } catch (e) { console.warn("Vagon cleanup warning:", e); }
+            }
             if (container._isCustomContainer) {
                 // If custom container, only remove the iframe and overlay, don't remove the container itself
                 if (iframe && iframe.parentNode === container) {
@@ -623,10 +735,11 @@
                 // Probably better to leave it to avoid layout shifts, or check if we added it.
             } else {
                 // Default behavior: remove the entire widget container
-                if (container.parentNode) {
+                if (container && container.parentNode) {
                     container.parentNode.removeChild(container);
                 }
             }
+
         }
 
         window.removeEventListener('message', handleIframeMessage);
@@ -780,10 +893,6 @@
 
     // --- INTERNAL LOGIC ---
     const sendMessageToIframe = (data) => {
-        if (!iframe || !iframe.contentWindow) {
-            console.error("Iframe not ready or widget not initialized.");
-            return;
-        }
         console.log("Queueing message:", data);
         messageQueue.push(data);
     };
@@ -845,7 +954,11 @@
             y: y
         };
         payload._padding = "||END||";
-        iframe.contentWindow.postMessage(payload, '*');
+        if (config.provider === 'vagon') {
+            window.Vagon.emitUIInteraction(payload);
+        } else if (config.provider === 'streampixel') {
+            iframe.contentWindow.postMessage(payload, '*');
+        }
     };
 
 })();

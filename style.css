@@ -209,7 +209,7 @@ body {
 }
 
 #dh-connect-btn {
-    width: 80px;
+    min-width: 80px;
     white-space: nowrap;
 }
 
@@ -486,7 +486,8 @@ body {
 }
 
 .form-group input,
-.form-group textarea {
+.form-group textarea,
+.form-group select {
     width: 100%;
     background-color: var(--input-bg);
     border: 1px solid var(--border-color);
@@ -494,6 +495,11 @@ body {
     padding: 0.75rem;
     color: white;
     font-family: inherit;
+}
+
+.form-group select option {
+    background-color: var(--input-bg);
+    color: white;
 }
 
 .form-group input:focus,

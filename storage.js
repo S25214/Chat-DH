@@ -143,7 +143,8 @@ class StorageManager {
             dhStreamId: localStorage.getItem('dh_stream_id') || '',
             ttsUrl: localStorage.getItem('tts_url') || '',
             ttsToken: localStorage.getItem('tts_token') || '',
-            ttsParams: localStorage.getItem('tts_params') || '{}'
+            ttsParams: localStorage.getItem('tts_params') || '{}',
+            webAvatarModel: localStorage.getItem('web_avatar_model') || 'Kitagawa'
         };
     }
 
@@ -154,6 +155,7 @@ class StorageManager {
         if (settings.ttsUrl !== undefined) localStorage.setItem('tts_url', settings.ttsUrl);
         if (settings.ttsToken !== undefined) localStorage.setItem('tts_token', settings.ttsToken);
         if (settings.ttsParams !== undefined) localStorage.setItem('tts_params', settings.ttsParams);
+        if (settings.webAvatarModel !== undefined) localStorage.setItem('web_avatar_model', settings.webAvatarModel);
     }
 }
 
