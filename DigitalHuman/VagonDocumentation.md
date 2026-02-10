@@ -8,7 +8,7 @@ Embed the script code between the `<head> </head>` tags inside the page you embe
 <script src="https://app.vagon.io/vagonsdk.js"></script>
 ```
 
-{% hint style="info" %}
+
 Despite you added the JS SDK script between the tags in your client code, if you can not establish a connection, please be sure that you copied the iFrame tag from the Vagon Streams dashboard.
 
 If you manually created your iFrame code by adding your Streams Link, please check that you applied the id tag and other required iFrame properties correctly from the sample code below.
@@ -17,7 +17,7 @@ If you manually created your iFrame code by adding your Streams Link, please che
 <iframe id="vagonFrame" allow="microphone  *; clipboard-read *; clipboard-write *; encrypted-media *;" src="_Stream_URL_"/>
 ```
 
-{% endhint %}
+
 
 <figure><img src="https://957593864-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FaBZSLkY0LBQ4VmKzrByg%2Fuploads%2FGxvwlzEVvtVubLZd3dE3%2Fiframe.png?alt=media&#x26;token=bd901037-4f78-4e93-b1ff-6711882d12ae" alt=""><figcaption></figcaption></figure>
 
