@@ -701,8 +701,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Construct payload - generic structure, might need adjustment for specific providers (ElevenLabs, OpenAI, etc)
                         // This is a best-effort implementation assuming a standard Text-to-Speech contract or adapting 
                         // logic similar to what the DH widget likely expects.
+
+                        // Sanitize text for TTS
+                        let ttsText = responseText;
+                        // Replace code blocks
+                        ttsText = ttsText.replace(/```[\s\S]*?```/g, "code block");
+                        // Replace links
+                        ttsText = ttsText.replace(/https?:\/\/[^\s)]+/g, "link");
+
                         const ttsPayload = {
-                            text: responseText,
+                            text: ttsText,
                             ...params
                         };
 
