@@ -111,10 +111,7 @@
             }
 
             // Queue UI Toggle
-            if (config.showUI) {
-                console.log("Queueing UI On");
-                messageQueue.push({ command: "generic_message", message: "uiOn" });
-            } else {
+            if (!config.showUI) {
                 console.log("Queueing UI Off");
                 messageQueue.push({ command: "generic_message", message: "uiOff" });
             }
