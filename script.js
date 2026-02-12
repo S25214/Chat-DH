@@ -289,10 +289,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.DigitalHuman && window.DigitalHuman.init) {
                 window.DigitalHuman.init(state.dhStreamId, {
                     autoUnmute: false,
-                    showUI: false,
+                    showUI: true,
                     lookAt: true,
                     camera: { x: 0, y: -15, z: 120 },
-                    microphone: false
+                    microphone: true
                 });
                 state.isDhConnected = true;
                 updateConnectionButtons();
