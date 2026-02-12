@@ -65,15 +65,14 @@ async function initSDK(streamId, config) {
 
         // SDK configuration
         const sdkConfig = {
-            appId: streamId, // Map streamId to appId
+            appId: streamId, 
             AutoConnect: true,
-            StartVideoMuted: true, // Required for autoplay in many browsers
-            checkHoveringMouse: true, // Enable hovering mouse by default
-            useMic: true,
-            ...config // Merge any user config
+            StartVideoMuted: true, 
+            checkHoveringMouse: true, 
+            // useMic: true,
+            ...config 
         };
 
-        // Initialize SDK (returns a Promise based on observation)
         const result = await StreamPixelApplication(sdkConfig);
 
         sdk = result;
