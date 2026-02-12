@@ -82,8 +82,14 @@
         if (event.data && event.data.value === 'loadingComplete') {
             isLoaded = true;
 
+            // Queue Microphone Enable
+            if (config.microphone) {
+                messageQueue.push({ command: 'microphone', value: true });
+            }
             // Queue Auto-Unmute
             if (config.autoUnmute) {
+                console.log("Queueing Auto-unmuting Audio (Config Enabled)");
+                messageQueue.push({ command: 'unMuteAudio' });
                 if (overlay) {
                     overlay.remove();
                     overlay = null;

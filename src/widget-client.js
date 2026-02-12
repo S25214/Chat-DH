@@ -31,6 +31,13 @@ window.addEventListener('message', (event) => {
             } else {
                 console.warn("UIControl not available for unMuteAudio");
             }
+        } else if (data.command === 'microphone') {
+            if (sdk.pixelStreaming) {
+                console.log("Toggling microphone via PixelStreaming");
+                sdk.pixelStreaming.unmuteMicrophone(data.value);
+            } else {
+                console.warn("PixelStreaming not available for microphone");
+            }
         } else {
             sdk.appStream.stream.emitUIInteraction({ ...data });
         }
@@ -102,9 +109,6 @@ function waitForVideoReady(config) {
 
             // Notify parent
             window.parent.postMessage({ value: 'loadingComplete' }, '*');
-
-            if (config.autoUnmute) sdk.UIControl.toggleAudio();
-            if (config.microphone) sdk.pixelStreaming.unmuteMicrophone(true);
 
             // Hide custom loader
             const loader = document.getElementById('custom-loader');
