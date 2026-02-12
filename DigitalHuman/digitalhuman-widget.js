@@ -84,11 +84,6 @@
 
             // Queue Auto-Unmute
             if (config.autoUnmute) {
-                console.log("Queueing Auto-unmuting Audio (Config Enabled)");
-                messageQueue.push({ command: 'unMuteAudio' });
-                if (config.microphone) {
-                    messageQueue.push({ command: 'enableMicrophone' });
-                }
                 if (overlay) {
                     overlay.remove();
                     overlay = null;
@@ -579,22 +574,6 @@
         // or just rely on the bundle's logic.
         // For now, the bundle handles it.
 
-        window.addEventListener('message', async (event) => {
-            if (event.data && event.data.command === 'enableMicrophone') {
-                try {
-                    console.log("Attempting to enable microphone...");
-                    await navigator.mediaDevices.getUserMedia({ audio: true });
-                    if (window.pixelStreaming) {
-                        window.pixelStreaming.unmuteMicrophone(true);
-                        console.log("Microphone enabled via pixelStreaming");
-                    } else {
-                        console.warn("pixelStreaming object not found on window");
-                    }
-                } catch (err) {
-                    console.error("Error enabling microphone:", err);
-                }
-            }
-        });
     </script>
 </body>
 </html>
@@ -660,10 +639,7 @@
                 }
             } else {
                 messageQueue.push({ command: 'unMuteAudio' });
-                if (config.microphone) {
-                    messageQueue.push({ command: 'enableMicrophone' });
-                }
-                console.log("Unmuted Audio & Enabled Mic (if configured)");
+                console.log("Unmuted Audio");
             }
 
             overlay.remove();

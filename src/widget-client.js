@@ -41,6 +41,7 @@ async function initSDK(streamId, config) {
     if (sdk) return;
 
     const streamContainer = document.getElementById('stream-container');
+    if (config.microphone) await navigator.mediaDevices.getUserMedia({audio:true});
 
     try {
         console.log("Initializing StreamPixel WebSDK with appId:", streamId);
@@ -51,6 +52,7 @@ async function initSDK(streamId, config) {
             AutoConnect: true,
             StartVideoMuted: true, // Required for autoplay in many browsers
             checkHoveringMouse: true, // Enable hovering mouse by default
+            useMic: config.microphone,
             ...config // Merge any user config
         };
 
@@ -78,14 +80,14 @@ async function initSDK(streamId, config) {
         }
 
         // Wait for video to be ready before signalling parent
-        waitForVideoReady();
+        waitForVideoReady(config);
 
     } catch (e) {
         console.error("SDK Init Error", e);
     }
 }
 
-function waitForVideoReady() {
+function waitForVideoReady(config) {
     const maxAttempts = 600; // 60 seconds roughly (if 100ms interval)
     let attempts = 0;
 
@@ -100,6 +102,9 @@ function waitForVideoReady() {
 
             // Notify parent
             window.parent.postMessage({ value: 'loadingComplete' }, '*');
+
+            if (config.autoUnmute) sdk.UIControl.toggleAudio();
+            if (config.microphone) sdk.pixelStreaming.unmuteMicrophone(true);
 
             // Hide custom loader
             const loader = document.getElementById('custom-loader');
