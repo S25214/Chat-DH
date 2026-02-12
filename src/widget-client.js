@@ -14,7 +14,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
 let sdk = null; // { pixelStreaming, appStream }
 
-window.addEventListener('message', (event) => {
+
+window.addEventListener('message', async (event) => {
     const data = event.data;
     if (!data) return;
 
@@ -34,6 +35,15 @@ window.addEventListener('message', (event) => {
         } else if (data.command === 'microphone') {
             if (sdk.pixelStreaming) {
                 console.log("Toggling microphone via PixelStreaming");
+                if (data.value) {
+                    try {
+                        await navigator.mediaDevices.getUserMedia({ audio: true });
+                        console.log("Microphone access granted.");
+                    } catch (e) {
+                        console.error("Microphone access denied:", e);
+                        return;
+                    }
+                }
                 sdk.pixelStreaming.unmuteMicrophone(data.value);
             } else {
                 console.warn("PixelStreaming not available for microphone");
@@ -48,7 +58,7 @@ async function initSDK(streamId, config) {
     if (sdk) return;
 
     const streamContainer = document.getElementById('stream-container');
-    if (config.microphone) await navigator.mediaDevices.getUserMedia({audio:true});
+    // REMOVED: if (config.microphone) await navigator.mediaDevices.getUserMedia({audio:true});
 
     try {
         console.log("Initializing StreamPixel WebSDK with appId:", streamId);
@@ -124,3 +134,4 @@ function waitForVideoReady() {
         }
     }, 100);
 }
+
