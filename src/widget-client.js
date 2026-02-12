@@ -59,7 +59,7 @@ async function initSDK(streamId, config) {
             AutoConnect: true,
             StartVideoMuted: true, // Required for autoplay in many browsers
             checkHoveringMouse: true, // Enable hovering mouse by default
-            useMic: config.microphone,
+            useMic: true,
             ...config // Merge any user config
         };
 
@@ -87,14 +87,14 @@ async function initSDK(streamId, config) {
         }
 
         // Wait for video to be ready before signalling parent
-        waitForVideoReady(config);
+        waitForVideoReady();
 
     } catch (e) {
         console.error("SDK Init Error", e);
     }
 }
 
-function waitForVideoReady(config) {
+function waitForVideoReady() {
     const maxAttempts = 600; // 60 seconds roughly (if 100ms interval)
     let attempts = 0;
 

@@ -650,6 +650,9 @@
 
             overlay.remove();
             overlay = null; // Clear reference
+            if (config.microphone) {
+                messageQueue.push({ command: 'microphone', value: true });
+            }
             if (iframe) iframe.focus();
         });
 
