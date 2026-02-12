@@ -210,7 +210,7 @@
                 customContainer = optionsOrContainer;
             } else if (typeof optionsOrContainer === 'object') {
                 if (optionsOrContainer.container) customContainer = optionsOrContainer.container;
-                if (optionsOrContainer.autoUnmute) config.autoUnmute = true;
+                if (optionsOrContainer.autoUnmute === false) config.autoUnmute = false;
                 if (optionsOrContainer.showUI === false) config.showUI = false;
                 if (optionsOrContainer.lookAt === true) config.lookAt = true;
                 if (optionsOrContainer.camera) config.camera = optionsOrContainer.camera;
