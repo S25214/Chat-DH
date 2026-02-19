@@ -26,7 +26,7 @@ window.addEventListener('message', async (event) => {
     } else if (sdk && sdk.appStream && sdk.appStream.stream) {
         // Delegate commands to the SDK
         if (data.command === 'unMuteAudio') {
-            if (!sdk.UIControl.audioEnabled) {
+            if (sdk.UIControl.audioEnabled) {
                 sdk.UIControl.toggleAudio();
                 console.log("Audio Unmuted");
             } else {
