@@ -26,11 +26,17 @@ window.addEventListener('message', async (event) => {
     } else if (sdk && sdk.appStream && sdk.appStream.stream) {
         // Delegate commands to the SDK
         if (data.command === 'unMuteAudio') {
+            console.log("Received 'unMuteAudio' command. SDK state:", sdk);
             if (sdk.UIControl) {
                 console.log("Toggling audio via UIControl");
-                sdk.UIControl.toggleAudio();
+                try {
+                    sdk.UIControl.toggleAudio();
+                    console.log("Audio toggle called successfully");
+                } catch (e) {
+                    console.error("Error calling toggleAudio:", e);
+                }
             } else {
-                console.warn("UIControl not available for unMuteAudio");
+                console.warn("UIControl not available for unMuteAudio. SDK keys:", Object.keys(sdk));
             }
         } else if (data.command === 'microphone') {
             if (sdk.pixelStreaming) {
@@ -65,18 +71,29 @@ async function initSDK(streamId, config) {
 
         // SDK configuration
         const sdkConfig = {
-            appId: streamId, 
+            appId: streamId,
             AutoConnect: true,
-            StartVideoMuted: true, 
-            checkHoveringMouse: true, 
+            StartVideoMuted: true,
+            checkHoveringMouse: true,
             // useMic: true,
-            ...config 
+            peerConnectionOptions: {
+                iceServers: [
+                    { urls: ['stun:stun1.l.google.com:19302'] }
+                ]
+            },
+            ...config
         };
 
         const result = await StreamPixelApplication(sdkConfig);
 
         sdk = result;
         console.log("SDK Initialized:", sdk);
+        console.log("SDK Keys:", Object.keys(sdk));
+        if (sdk.UIControl) {
+            console.log("SDK.UIControl is available");
+        } else {
+            console.warn("SDK.UIControl is MISSING");
+        }
 
         const { appStream, pixelStreaming } = sdk;
 
