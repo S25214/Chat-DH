@@ -533,7 +533,6 @@
                 allowFeatures += "; microphone *";
             }
             iframe.allow = allowFeatures;
-            iframe.sandbox = "allow-scripts allow-same-origin allow-forms";
             iframe.style.cssText = "width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0;";
             container.appendChild(iframe);
         }

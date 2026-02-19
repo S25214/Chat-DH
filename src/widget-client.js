@@ -60,8 +60,7 @@ async function initSDK(streamId, config) {
             appId: streamId,
             AutoConnect: true,
             StartVideoMuted: true,
-            checkHoveringMouse: true,
-            ...config
+            checkHoveringMouse: true
         };
 
         if (config.microphone) await navigator.mediaDevices.getUserMedia({ audio: true });
