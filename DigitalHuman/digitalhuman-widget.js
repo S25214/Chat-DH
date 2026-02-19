@@ -562,7 +562,6 @@
                 }
             } else {
                 messageQueue.push({ command: 'unMuteAudio' });
-                console.log("Unmuted Audio");
             }
 
             overlay.remove();
