@@ -73,14 +73,8 @@ async function initSDK(streamId, config) {
         const sdkConfig = {
             appId: streamId,
             AutoConnect: true,
-            StartVideoMuted: true,
+            StartVideoMuted: false,
             checkHoveringMouse: true,
-            // useMic: true,
-            peerConnectionOptions: {
-                iceServers: [
-                    { urls: ['stun:stun1.l.google.com:19302'] }
-                ]
-            },
             ...config
         };
 

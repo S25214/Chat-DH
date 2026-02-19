@@ -15,7 +15,7 @@
     let messageQueue = [];
     let queueInterval = null;
     let config = {
-        autoUnmute: false,
+        autoUnmute: true,
         showUI: true,
         lookAt: false,
         camera: null,
