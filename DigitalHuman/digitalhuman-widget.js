@@ -565,6 +565,7 @@
             }
 
             overlay.remove();
+            config.autoPlay = true;
             overlay = null; // Clear reference
             if (config.microphone) {
                 messageQueue.push({ command: 'microphone', value: true });

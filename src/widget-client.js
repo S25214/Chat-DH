@@ -26,15 +26,11 @@ window.addEventListener('message', async (event) => {
     } else if (sdk && sdk.appStream && sdk.appStream.stream) {
         // Delegate commands to the SDK
         if (data.command === 'unMuteAudio') {
-            if (sdk.UIControl) {
-                try {
-                    sdk.UIControl.toggleAudio();
-                    console.log("Audio Enabled:", sdk.UIControl.audioEnabled);
-                } catch (e) {
-                    console.error("Error calling toggleAudio:", e);
-                }
+            if (!sdk.UIControl.audioEnabled) {
+                sdk.UIControl.toggleAudio();
+                console.log("Audio Unmuted");
             } else {
-                console.warn("UIControl not available for unMuteAudio. SDK keys:", Object.keys(sdk));
+                console.log("Audio Already Unmuted");
             }
         } else if (data.command === 'microphone') {
             if (sdk.pixelStreaming) {
