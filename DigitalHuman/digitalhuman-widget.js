@@ -80,6 +80,10 @@
     function handleIframeMessage(event) {
         if (!iframe || event.source !== iframe.contentWindow) return;
         if (event.data && event.data.value === 'loadingComplete') {
+            if (isLoaded) {
+                console.log("loadingComplete received again, ignoring (already loaded).");
+                return;
+            }
             isLoaded = true;
 
             // Queue Microphone Enable

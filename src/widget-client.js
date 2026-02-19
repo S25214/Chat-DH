@@ -26,20 +26,9 @@ window.addEventListener('message', async (event) => {
     } else if (sdk && sdk.appStream && sdk.appStream.stream) {
         // Delegate commands to the SDK
         if (data.command === 'unMuteAudio') {
-            if (sdk.UIControl.audioEnabled) {
-                sdk.UIControl.toggleAudio();
-                console.log("Audio Unmuted");
-            } else {
-                console.log("Audio Already Unmuted");
-            }
+            sdk.UIControl.toggleAudio();
         } else if (data.command === 'microphone') {
-            if (sdk.pixelStreaming) {
-                await navigator.mediaDevices.getUserMedia({ audio: data.value });
-                sdk.pixelStreaming.unmuteMicrophone(data.value);
-                console.log("Microphone: " + data.value);
-            } else {
-                console.warn("PixelStreaming not available for microphone");
-            }
+            await navigator.mediaDevices.getUserMedia({ audio: data.value })
         } else {
             sdk.appStream.stream.emitUIInteraction({ ...data });
         }
@@ -60,10 +49,9 @@ async function initSDK(streamId, config) {
             appId: streamId,
             AutoConnect: true,
             StartVideoMuted: true,
-            checkHoveringMouse: true
+            checkHoveringMouse: true,
+            useMic: true
         };
-
-        if (config.microphone) await navigator.mediaDevices.getUserMedia({ audio: true });
 
         const result = await StreamPixelApplication(sdkConfig);
 
@@ -78,14 +66,6 @@ async function initSDK(streamId, config) {
 
         const { appStream, pixelStreaming } = sdk;
 
-        // Helper to signal readiness
-        const signalReady = () => {
-            console.log("Stream Video detected and ready.");
-            window.parent.postMessage({ value: 'loadingComplete' }, '*');
-            const loader = document.getElementById('custom-loader');
-            if (loader) loader.style.display = 'none';
-        };
-
         // Use SDK event for video initialization
         if (appStream) {
             appStream.onVideoInitialized = () => {
@@ -93,7 +73,10 @@ async function initSDK(streamId, config) {
                 if (appStream.rootElement && !streamContainer.contains(appStream.rootElement)) {
                     streamContainer.appendChild(appStream.rootElement);
                 }
-                signalReady();
+                console.log("Stream Video detected and ready.");
+                window.parent.postMessage({ value: 'loadingComplete' }, '*');
+                const loader = document.getElementById('custom-loader');
+                if (loader) loader.style.display = 'none';
             };
         }
 
