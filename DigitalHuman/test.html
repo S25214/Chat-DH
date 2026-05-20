@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Human Portal</title>
+    <!-- Modern Premium Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #08090d;
+            --card-bg: rgba(13, 17, 30, 0.65);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --input-bg: rgba(255, 255, 255, 0.03);
+            --input-border: rgba(255, 255, 255, 0.12);
+            --input-focus-border: #6366f1;
+            --input-focus-shadow: rgba(99, 102, 241, 0.25);
+            
+            --primary-gradient: linear-gradient(135deg, #6366f1 0%, #3b82f6 50%, #06b6d4 100%);
+            --button-hover-shadow: rgba(99, 102, 241, 0.4);
+            --accent-red: linear-gradient(135deg, #ef4444 0%, #f43f5e 100%);
+            --red-hover-shadow: rgba(239, 68, 68, 0.4);
+            
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            font-family: 'Inter', sans-serif;
+            color: var(--text-primary);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Ambient Glowing Background Orbs */
+        .background-glow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+            background: radial-gradient(circle at 50% 50%, #0c0e18 0%, #050609 100%);
+        }
+
+        .glow-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.15;
+            animation: float 25s infinite ease-in-out alternate;
+        }
+
+        .orb-1 {
+            width: 500px;
+            height: 500px;
+            background: #6366f1;
+            top: -10%;
+            left: -10%;
+            animation-duration: 20s;
+        }
+
+        .orb-2 {
+            width: 600px;
+            height: 600px;
+            background: #06b6d4;
+            bottom: -15%;
+            right: -10%;
+            animation-duration: 28s;
+            animation-delay: -5s;
+        }
+
+        .orb-3 {
+            width: 400px;
+            height: 400px;
+            background: #d946ef;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation-duration: 24s;
+            animation-delay: -10s;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translate(0, 0) scale(1);
+            }
+            50% {
+                transform: translate(50px, 40px) scale(1.15);
+            }
+            100% {
+                transform: translate(-30px, -20px) scale(0.9);
+            }
+        }
+
+        /* Glassmorphic Setup Card */
+        #setup-card {
+            position: relative;
+            z-index: 10;
+            width: 90%;
+            max-width: 520px;
+            padding: 48px;
+            background: var(--card-bg);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        #setup-card.hidden {
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+            pointer-events: none;
+        }
+
+        .logo-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 32px;
+            text-align: center;
+        }
+
+        .logo-icon {
+            width: 64px;
+            height: 64px;
+            background: var(--primary-gradient);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .logo-icon::after {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            background: var(--primary-gradient);
+            border-radius: 18px;
+            z-index: -1;
+            filter: blur(8px);
+            opacity: 0.5;
+        }
+
+        .logo-icon svg {
+            width: 32px;
+            height: 32px;
+            fill: white;
+        }
+
+        .app-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin: 0 0 8px 0;
+            background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .app-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        /* Elegant Form Elements */
+        .form-group {
+            margin-bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-label {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            pointer-events: none;
+            transition: color 0.3s;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 16px 16px 16px 48px;
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 15px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .input-field:focus {
+            border-color: var(--input-focus-border);
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 0 4px var(--input-focus-shadow);
+        }
+
+        .input-field:focus + .input-icon {
+            color: var(--input-focus-border);
+        }
+
+        .input-field::placeholder {
+            color: var(--text-muted);
+        }
+
+        .connect-btn {
+            width: 100%;
+            padding: 16px;
+            background: var(--primary-gradient);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-family: 'Outfit', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .connect-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(255, 255, 255, 0.1), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .connect-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px var(--button-hover-shadow);
+        }
+
+        .connect-btn:hover::before {
+            opacity: 1;
+        }
+
+        .connect-btn:active {
+            transform: translateY(0);
+        }
+
+        .param-hint {
+            margin-top: 24px;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 8px;
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.6;
+            text-align: center;
+        }
+
+        .param-hint code {
+            font-family: monospace;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #3b82f6;
+            font-size: 11px;
+        }
+
+        /* Stream Container - Full Screen & Responsive */
+        #my-custom-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            z-index: 1;
+            /* Flex layout helps ensure content stretches correctly */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #my-custom-container iframe,
+        #my-custom-container canvas,
+        #my-custom-container video {
+            width: 100% !important;
+            height: 100% !important;
+            border: none !important;
+        }
+
+        /* Floating Premium Status & Controls */
+        #active-controls {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 20;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            transform: translateY(-50px);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        #active-controls.visible {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #10b981;
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .status-dot::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            background-color: #10b981;
+            opacity: 0.4;
+            animation: pulse 1.8s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(2.4);
+                opacity: 0;
+            }
+        }
+
+        .disconnect-btn {
+            padding: 8px 16px;
+            background: var(--accent-red);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .disconnect-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px var(--red-hover-shadow);
+        }
+
+        .disconnect-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Customized Notification/Toast System */
+        #toast-container {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 24px;
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 14px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideIn 0.3s forwards cubic-bezier(0.16, 1, 0.3, 1);
+            transition: opacity 0.3s, transform 0.3s;
+        }
+
+        .toast.hide {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        .toast-error {
+            border-left: 4px solid #ef4444;
+        }
+
+        .toast-success {
+            border-left: 4px solid #10b981;
+        }
+
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Full-screen Dynamic Ambient Backdrop -->
+    <div class="background-glow">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+        <div class="glow-orb orb-3"></div>
+    </div>
+
+    <!-- The Full-Screen Custom Container -->
+    <div id="my-custom-container"></div>
+
+    <!-- Beautiful Glowing Setup Card -->
+    <div id="setup-card">
+        <div class="logo-area">
+            <div class="logo-icon">
+                <!-- Glowing digital human/bot icon -->
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2c1.1 0 2 .9 2 2v1c0 1.1-.9 2-2 2s-2-.9-2-2V4c0-1.1.9-2 2-2zm0 15c-3.87 0-7 3.13-7 7h14c0-3.87-3.13-7-7-7zm0-9c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z"/>
+                </svg>
+            </div>
+            <h1 class="app-title">Digital Human Portal</h1>
+            <p class="app-subtitle">Initiate your ultra-responsive interactive streaming experience</p>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="streamUrlInput">Stream URL</label>
+            <div class="input-wrapper">
+                <div class="input-icon">
+                    <!-- Network Link SVG Icon -->
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                    </svg>
+                </div>
+                <input type="text" id="streamUrlInput" class="input-field" placeholder="https://share.streampixel.io/..." value="">
+            </div>
+        </div>
+
+        <button id="connectBtn" class="connect-btn" onclick="initCustom()">
+            <span>Establish Connection</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+        </button>
+
+        <div class="param-hint">
+            💡 Quick Tip: Automatically load a stream by appending <code>?url=STREAM_URL</code> to the window address.
+        </div>
+    </div>
+
+    <!-- Premium Floating Control Overlay -->
+    <div id="active-controls">
+        <div class="status-badge">
+            <div class="status-dot"></div>
+            <span>Connected</span>
+        </div>
+        <button id="disconnectBtn" class="disconnect-btn" onclick="disconnectDigitalHuman()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+            </svg>
+            <span>Disconnect</span>
+        </button>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toast-container"></div>
+
+    <script src="https://dhchat.didthat.cc/DigitalHuman/digitalhuman-widget.js"></script>
+
+    <script>
+        // Custom elegant notification system
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            
+            // Icon depending on type
+            const iconSvg = type === 'success' 
+                ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'
+                : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
+                
+            toast.innerHTML = `${iconSvg} <span>${message}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('hide');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        function initCustom(overrideUrl) {
+            const url = overrideUrl || document.getElementById('streamUrlInput').value.trim();
+            const container = document.getElementById('my-custom-container');
+
+            if (url && url !== "https://share.streampixel.io/YOUR_STREAM_ID" && url !== "") {
+                try {
+                    // Pass the custom container element as the second argument
+                    window.DigitalHuman.init(url, { 
+                        container: container, 
+                        autoUnmute: true, 
+                        showUI: true 
+                    });
+
+                    // Successfully connected visual feedback
+                    const setupCard = document.getElementById('setup-card');
+                    setupCard.classList.add('hidden');
+
+                    const activeControls = document.getElementById('active-controls');
+                    activeControls.classList.add('visible');
+
+                    showToast('Establishing secure digital human session...');
+                } catch (e) {
+                    console.error(e);
+                    showToast('Failed to initialize Digital Human widget.', 'error');
+                }
+            } else {
+                showToast('Please enter a valid Stream URL', 'error');
+            }
+        }
+
+        function disconnectDigitalHuman() {
+            if (window.DigitalHuman && window.DigitalHuman.disconnect) {
+                try {
+                    window.DigitalHuman.disconnect();
+                    
+                    // Reset container content
+                    document.getElementById('my-custom-container').innerHTML = '';
+                    
+                    // Visual state restoration
+                    document.getElementById('setup-card').classList.remove('hidden');
+                    document.getElementById('active-controls').classList.remove('visible');
+                    
+                    showToast('Disconnected from the digital human session.');
+                } catch (e) {
+                    console.error(e);
+                    showToast('Error during disconnection.', 'error');
+                }
+            }
+        }
+
+        // Auto initialization check
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const streamUrlParam = urlParams.get('url');
+
+            if (streamUrlParam) {
+                // Update input field for visibility
+                document.getElementById('streamUrlInput').value = streamUrlParam;
+                
+                // Show notification and auto-initialize
+                showToast('Found URL parameter. Connecting automatically...', 'success');
+                setTimeout(() => {
+                    initCustom(streamUrlParam);
+                }, 500);
+            }
+        });
+    </script>
+</body>
+
+</html>

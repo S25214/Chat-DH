@@ -666,7 +666,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Replace links
                     ttsText = ttsText.replace(/https?:\/\/[^\s)]+/g, "link");
 
-                    window.DigitalHuman.sendJob(ttsText, state.ttsUrl, state.ttsToken, params);
+                    window.DigitalHuman.sendJob(userMsg.content, ttsText, state.ttsUrl, state.ttsToken, params);
                 }
             }
 

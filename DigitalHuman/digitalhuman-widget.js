@@ -857,16 +857,37 @@
         sendMessageToIframe(payload);
     };
 
-    window.DigitalHuman.sendJob = function (text, callbackUrl, authToken, customParams = {}) {
+    window.DigitalHuman.sendJob = function (userText = null, aiText = null, callbackUrl, authToken, customParams = {}) {
+        const context = {}
+        if (userText) context.userText = userText;
+        if (aiText) context.aiText = aiText;
         const payload = {
             command: "tts_order",
-            text: text,
             callback_url: callbackUrl,
             auth_token: authToken,
+            ...context,
             ...customParams
         };
         console.log("Sending Job from Parent Site:", payload);
         sendMessageToIframe(payload);
+    };
+
+    window.DigitalHuman.playAudio = function (userText = null, aiText = null, audioUrl) {
+        console.log("Sending Play Audio Command: ", audioUrl);
+        const context = {}
+        if (userText) context.userText = userText;
+        if (aiText) context.aiText = aiText;
+        const payload = {
+            command: "play_audio",
+            audioUrl: audioUrl,
+            ...context
+        };
+        sendMessageToIframe(payload);
+    };
+
+    window.DigitalHuman.toggleMicrophone = function (bool) {
+        console.log("Sending Toggle Microphone Command: ", bool);
+        messageQueue.push({ command: 'microphone', value: bool });
     };
 
     window.DigitalHuman.lookAt = function (faces, x, y) {
