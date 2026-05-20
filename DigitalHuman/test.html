@@ -427,6 +427,179 @@
             transform: translateY(0);
         }
 
+        /* Camera Button and Modal Styles */
+        .camera-btn {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .camera-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+        }
+
+        .camera-btn:active {
+            transform: translateY(0);
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(8, 9, 13, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            z-index: 50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .modal-backdrop.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            width: 90%;
+            max-width: 440px;
+            padding: 32px;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            transform: scale(0.9) translateY(20px);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .modal-backdrop.active .modal-card {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0 0 8px 0;
+            background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .modal-subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin: 0 0 24px 0;
+            line-height: 1.5;
+        }
+
+        .coordinate-inputs {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+
+        .coord-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .coord-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .coord-field {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--input-border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 14px;
+            text-align: center;
+            outline: none;
+            box-sizing: border-box;
+            transition: all 0.3s;
+        }
+
+        .coord-field:focus {
+            border-color: var(--input-focus-border);
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 0 3px var(--input-focus-shadow);
+        }
+
+        .coord-field::-webkit-outer-spin-button,
+        .coord-field::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .coord-field[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .modal-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-cancel {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-cancel:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+        }
+
+        .btn-apply {
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        }
+
+        .btn-apply:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+        }
+
         /* Customized Notification/Toast System */
         #toast-container {
             position: fixed;
@@ -535,6 +708,12 @@
         <div class="status-badge">
             <div class="status-dot"></div>
         </div>
+        <button id="cameraBtn" class="camera-btn" onclick="openCameraModal()" title="Adjust Camera">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                <circle cx="12" cy="13" r="4"></circle>
+            </svg>
+        </button>
         <button id="disconnectBtn" class="disconnect-btn" onclick="disconnectDigitalHuman()" title="Disconnect">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -542,6 +721,34 @@
                 <line x1="15" y1="9" x2="9" y2="15"></line>
             </svg>
         </button>
+    </div>
+
+    <!-- Camera Settings Modal -->
+    <div id="camera-modal" class="modal-backdrop">
+        <div class="modal-card">
+            <h2 class="modal-title">Adjust Camera Position</h2>
+            <p class="modal-subtitle">Configure the 3D coordinates (X, Y, Z) to reposition the digital human camera view.</p>
+            
+            <div class="coordinate-inputs">
+                <div class="coord-group">
+                    <label class="coord-label">X Coordinate</label>
+                    <input type="number" id="cam-x" step="0.1" class="coord-field" placeholder="0.0">
+                </div>
+                <div class="coord-group">
+                    <label class="coord-label">Y Coordinate</label>
+                    <input type="number" id="cam-y" step="0.1" class="coord-field" placeholder="0.0">
+                </div>
+                <div class="coord-group">
+                    <label class="coord-label">Z Coordinate</label>
+                    <input type="number" id="cam-z" step="0.1" class="coord-field" placeholder="0.0">
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="modal-btn btn-cancel" onclick="closeCameraModal()">Cancel</button>
+                <button class="modal-btn btn-apply" onclick="applyCameraSettings()">Apply View</button>
+            </div>
+        </div>
     </div>
 
     <!-- Notification Toast Container -->
@@ -617,6 +824,45 @@
                     console.error(e);
                     showToast('Error during disconnection.', 'error');
                 }
+            }
+        }
+
+        // Remember camera coordinates
+        let lastAppliedCamera = { x: 0.0, y: 0.0, z: 0.0 };
+
+        function openCameraModal() {
+            // Populate inputs with last applied camera settings
+            document.getElementById('cam-x').value = lastAppliedCamera.x;
+            document.getElementById('cam-y').value = lastAppliedCamera.y;
+            document.getElementById('cam-z').value = lastAppliedCamera.z;
+            
+            document.getElementById('camera-modal').classList.add('active');
+        }
+
+        function closeCameraModal() {
+            document.getElementById('camera-modal').classList.remove('active');
+        }
+
+        function applyCameraSettings() {
+            // Parse inputs
+            const x = parseFloat(document.getElementById('cam-x').value) || 0;
+            const y = parseFloat(document.getElementById('cam-y').value) || 0;
+            const z = parseFloat(document.getElementById('cam-z').value) || 0;
+
+            // Save settings
+            lastAppliedCamera = { x, y, z };
+
+            if (window.DigitalHuman && window.DigitalHuman.setCamera) {
+                try {
+                    window.DigitalHuman.setCamera(x, y, z);
+                    showToast(`Camera adjusted to: ${x}, ${y}, ${z}`);
+                    closeCameraModal();
+                } catch (e) {
+                    console.error(e);
+                    showToast('Failed to set camera position.', 'error');
+                }
+            } else {
+                showToast('Digital Human SDK is not ready.', 'error');
             }
         }
 
